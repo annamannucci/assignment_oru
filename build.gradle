@@ -1,0 +1,95 @@
+1/*
+ * coordination_oru_ros - Online coordination for multiple robots
+ *
+ * Copyright (C) 2017 Federico Pecora
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or (at
+ * your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ *
+ */
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+// The Maven publish plugin is only required if your package is used as a library.
+apply plugin: 'maven'
+
+// The Application plugin and mainClassName attribute are only required if
+// your package is used as a binary.
+apply plugin: 'application'
+// The main class that will be executed when you do 'gradle run'
+mainClassName = 'se.oru.coordination.coordination_oru.demo.DemoLauncher'
+
+repositories {
+  mavenLocal()
+  jcenter()
+  maven { url 'https://jitpack.io' }
+  maven { url 'https://github.com/rosjava/rosjava_mvn_repo/raw/master/' }
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+version = '0.6.3'//'0.0.0-SNAPSHOT'
+// Call your group something meaninful, e.g., '<inverse-url>.<project-name>'
+group = 'se.oru.coordination'
+
+dependencies {
+
+  // This pulls in the meta-csp-framework jar
+  //compile 'org.metacsp:meta-csp-framework:1.3.4'
+  //compile 'org.metacsp:meta-csp-framework:0.0.0-SNAPSHOT'
+  implementation 'com.github.FedericoPecora:meta-csp-framework:master-SNAPSHOT'
+
+
+  implementation 'com.github.PaoloForte95:coordination_oru:devel-SNAPSHOT'
+
+  implementation 'com.google.ortools:ortools-java:9.1.9490'
+
+
+  //For interface with OMPL
+  implementation 'net.java.dev.jna:jna:4.4.0'
+  implementation 'org.jgrapht:jgrapht-core:1.0.1'
+
+  //For demo infrastructure
+  implementation 'org.reflections:reflections:0.9.11'
+
+  //For RVizVisualization
+  implementation 'org.ros.rosjava_bootstrap:message_generation:[0.3, 0.4)'
+  implementation 'org.ros.rosjava_core:rosjava:[0.3,0.4)'
+  implementation 'org.ros.rosjava_messages:visualization_msgs:[1.12,1.13)'
+  implementation 'org.ros.rosjava_messages:nav_msgs:[1.12,1.13)'
+  implementation 'org.ros.rosjava_messages:geometry_msgs:[1.12,1.13)'
+  implementation 'org.ros.rosjava_messages:std_msgs:[0.5.0,0.6.0)'
+  
+  //For BrowserVisualization
+  implementation 'org.eclipse.jetty.websocket:websocket-api:9.4.12.v20180830'
+  implementation 'org.eclipse.jetty.websocket:websocket-server:9.4.12.v20180830'
+  implementation 'org.eclipse.jetty.websocket:websocket-client:9.4.12.v20180830'
+
+  //For JSON file handling
+  implementation 'com.google.code.gson:gson:2.8.5'
+  
+  // Add the following if you need to include jars that are not
+  // in Maven Central and that you have places in the directory "lib"
+  // (NOTE: you have to create this directory if you need it)
+  //compile fileTree(dir: 'lib', include: '**/*.jar')
+
+}
+
+run {
+    if (project.hasProperty("demo")) {
+        args(demo)
+    }
+}
