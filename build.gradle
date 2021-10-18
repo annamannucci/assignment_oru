@@ -53,7 +53,7 @@ dependencies {
   implementation 'com.github.FedericoPecora:meta-csp-framework:master-SNAPSHOT'
 
 
-  implementation 'com.github.PaoloForte95:coordination_oru:devel-SNAPSHOT'
+  implementation 'com.github.FedericoPecora:coordination_oru:master-SNAPSHOT'
 
   implementation 'com.google.ortools:ortools-java:9.1.9490'
 
