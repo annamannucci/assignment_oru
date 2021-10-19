@@ -1,7 +1,7 @@
 1/*
- * coordination_oru_ros - Online coordination for multiple robots
+ * assignment_oru - Online task assignment for multiple robots
  *
- * Copyright (C) 2017 Federico Pecora
+ * Copyright (C) 2021 Paolo Forte
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,8 +27,7 @@ apply plugin: 'maven'
 // The Application plugin and mainClassName attribute are only required if
 // your package is used as a binary.
 apply plugin: 'application'
-// The main class that will be executed when you do 'gradle run'
-mainClassName = 'se.oru.coordination.coordination_oru.demo.DemoLauncher'
+
 
 repositories {
   mavenLocal()
@@ -41,9 +40,9 @@ configurations.all {
     resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
 }
 
-version = '0.6.3'//'0.0.0-SNAPSHOT'
+version = '0.0.1'//'0.0.0-SNAPSHOT'
 // Call your group something meaninful, e.g., '<inverse-url>.<project-name>'
-group = 'se.oru.coordination'
+group = 'se.oru.assignment'
 
 dependencies {
 
@@ -55,8 +54,11 @@ dependencies {
 
   implementation 'com.github.FedericoPecora:coordination_oru:master-SNAPSHOT'
 
+  //For optimization problem
   implementation 'com.google.ortools:ortools-java:9.1.9490'
 
+  //For task visualization and coordination
+  implementation 'com.github.PaoloForte95:coordination_oru:devel-SNAPSHOT'
 
   //For interface with OMPL
   implementation 'net.java.dev.jna:jna:4.4.0'

@@ -1,6 +1,8 @@
-# A Framework for Multi-Robot Task Assignment, Motion Planning, Coordination and Control 
+# A Framework for Multi-Robot Task Assignment
 
-This software implements an _online coordination method for multiple robots_. Its main features are:
+# Updates coming soon
+
+This software implements an _online task assignment method for multiple robots_. Its main features are:
 
 * Goals can be posted and paths computed online
 * Precedences are inferred online, accounting for robot dynamics via provided dynamic models

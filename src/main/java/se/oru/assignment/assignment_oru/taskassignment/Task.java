@@ -1,4 +1,4 @@
-package se.oru.coordination.coordination_oru.taskassignment;
+package se.oru.assignment.assignment_oru.taskassignment;
 
 import java.util.ArrayList;
 import java.util.HashSet;

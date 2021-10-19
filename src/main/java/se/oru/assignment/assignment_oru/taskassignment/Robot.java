@@ -1,4 +1,4 @@
-package se.oru.coordination.coordination_oru.taskassignment;
+package se.oru.assignment.assignment_oru.taskassignment;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import se.oru.coordination.coordination_oru.ConstantAccelerationForwardModel;
