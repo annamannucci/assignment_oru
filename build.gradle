@@ -49,7 +49,9 @@ dependencies {
   // This pulls in the meta-csp-framework jar
   //compile 'org.metacsp:meta-csp-framework:1.3.4'
   //compile 'org.metacsp:meta-csp-framework:0.0.0-SNAPSHOT'
-  implementation 'com.github.FedericoPecora:meta-csp-framework:master-SNAPSHOT'
+  //implementation 'com.github.FedericoPecora:meta-csp-framework:master-SNAPSHOT'
+  //implementation 'com.github.FedericoPecora:meta-csp-framework:bcebfa7350'
+  implementation 'com.github.FedericoPecora:meta-csp-framework:b2e01201a7'
 
 
   //For optimization problem
