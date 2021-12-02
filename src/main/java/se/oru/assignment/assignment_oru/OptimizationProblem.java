@@ -26,13 +26,13 @@ import aima.core.util.datastructure.Pair;
 import se.oru.assignment.assignment_oru.methods.SystematicAlgorithm;
 import se.oru.coordination.coordination_oru.AbstractTrajectoryEnvelopeCoordinator;
 import se.oru.coordination.coordination_oru.CriticalSection;
-import se.oru.coordination.coordination_oru.IndexedDelay;
+import se.oru.assignment.assignment_oru.IndexedDelay;
 import se.oru.coordination.coordination_oru.Mission;
 import se.oru.coordination.coordination_oru.RobotReport;
 import se.oru.coordination.coordination_oru.TrajectoryEnvelopeCoordinator;
-import se.oru.coordination.coordination_oru.fleetmasterinterface.AbstractFleetMasterInterface;
-import se.oru.coordination.coordination_oru.fleetmasterinterface.FleetMasterInterface;
-import se.oru.coordination.coordination_oru.fleetmasterinterface.FleetMasterInterfaceLib.CumulatedIndexedDelaysList;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.AbstractFleetMasterInterface;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.FleetMasterInterface;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.FleetMasterInterfaceLib.CumulatedIndexedDelaysList;
 import se.oru.coordination.coordination_oru.motionplanning.AbstractMotionPlanner;
 import se.oru.coordination.coordination_oru.util.FleetVisualization;
 import se.oru.coordination.coordination_oru.util.Missions;
@@ -142,7 +142,16 @@ public class OptimizationProblem {
 			
 		}
 		
-		
+		/**
+		 * The default footprint used for robots if none is specified.
+		 * NOTE: coordinates in footprints must be given in in CCW or CW order. 
+		 */
+		public static Coordinate[] DEFAULT_FOOTPRINT = new Coordinate[] {
+				new Coordinate(-1.7, 0.7),	//back left
+				new Coordinate(-1.7, -0.7),	//back right
+				new Coordinate(2.7, -0.7),	//front right
+				new Coordinate(2.7, 0.7)	//front left
+		};
 		
 		
 		/**
@@ -558,7 +567,7 @@ public class OptimizationProblem {
 	 */
 	public void instantiateFleetMaster(double origin_x, double origin_y, double origin_theta, double resolution, long width, long height, boolean dynamic_size, boolean propagateDelays, boolean debug) {
 		this.fleetMasterInterface = new FleetMasterInterface(origin_x, origin_y, origin_theta, resolution, width, height, dynamic_size, debug);
-		this.fleetMasterInterface.setDefaultFootprint(coordinator.getDefaultFootprint());
+		this.fleetMasterInterface.setDefaultFootprint(DEFAULT_FOOTPRINT);
 		this.propagateDelays = propagateDelays;
 	}
 	
@@ -572,7 +581,7 @@ public class OptimizationProblem {
 	 */
 	public void instantiateFleetMaster(double resolution, boolean propagateDelays) {
 		this.fleetMasterInterface = new FleetMasterInterface(0., 0., 0., resolution, 100, 100, true, false);
-		this.fleetMasterInterface.setDefaultFootprint(coordinator.getDefaultFootprint());
+		this.fleetMasterInterface.setDefaultFootprint(DEFAULT_FOOTPRINT);
 		this.propagateDelays = propagateDelays;
 	}
 	
@@ -598,6 +607,7 @@ public class OptimizationProblem {
 	 */
 	protected void removePath(int pathID){
 		if (!fleetMasterInterface.clearPath(pathID)) 
+			
 			metaCSPLogger.severe("Unable to remove the path to the fleetmaster gridmap. Check if the map contains the given path.");
 	}
 	
@@ -894,7 +904,7 @@ public class OptimizationProblem {
 			}
 			//Evaluate the path from the Robot Starting Pose to Task End Pose
 			int taskIndex = realTasksIDs.indexOf(taskID);
-			AbstractMotionPlanner rsp =  tec.getMotionPlanner(robotID).getCopy();
+			AbstractMotionPlanner rsp =  tec.getMotionPlanner(robotID).getCopy(true);
 			
 			rsp.setStart(rr.getPose());
 			rsp.setGoals(taskQueue.get(taskIndex).getStartPose(),taskQueue.get(taskIndex).getGoalPose());
@@ -1434,10 +1444,10 @@ public class OptimizationProblem {
 			for (int taskID : realTasksIDs ) {
 				int j = tasksIDs.indexOf(taskID);
 				 for(int path = 0;path < maxNumPaths; path++) {
-					 //double vel = tec.getRobotMaxVelocity(robotID);
-					// double acc = tec.getRobotMaxAcceleration(robotID);
-					 double vel = tec.getForwardModel(robotID).getVel();
-					 double acc = tec.getForwardModel(robotID).getAcc();
+					 double vel = tec.getRobotMaxVelocity(robotID);
+					 double acc = tec.getRobotMaxAcceleration(robotID);
+					 //double vel = tec.getForwardModel(robotID).getVel();
+					 //double acc = tec.getForwardModel(robotID).getAcc();
 					 double arrivalTime = computeArrivalTime(PAll[i][j][path],vel,acc);
 					 arrivalTimeMatrix[i][j][path] = arrivalTime;
 				 }
@@ -1464,10 +1474,10 @@ public class OptimizationProblem {
 			int taskIndex = realTasksIDs.indexOf(taskID);
 			if (taskQueue.get(taskIndex).isDeadlineSpecified()) { // Compute tardiness only if specified in task constructor
 				double deadline = taskQueue.get(taskIndex).getDeadline();  //Expressed in seconds
-				//double vel = tec.getRobotMaxVelocity(robotID);
-				//double acc = tec.getRobotMaxAcceleration(robotID);
-				double vel = tec.getForwardModel(robotID).getVel();
-				double acc = tec.getForwardModel(robotID).getAcc();
+				double vel = tec.getRobotMaxVelocity(robotID);
+				double acc = tec.getRobotMaxAcceleration(robotID);
+				//double vel = tec.getForwardModel(robotID).getVel();
+				//double acc = tec.getForwardModel(robotID).getAcc();
 				double completionTime = computeArrivalTime(pathLength,vel,acc) + taskQueue.get(taskIndex).getOperationTime();
 				tardiness = Math.max(0, (completionTime-deadline));
 			}	
@@ -1495,10 +1505,10 @@ public class OptimizationProblem {
 					for(int path = 0;path < maxNumPaths; path++) {
 					if (taskQueue.get(j).isDeadlineSpecified()) { // Compute tardiness only if specified in task constructor
 						double deadline = taskQueue.get(j).getDeadline();  //Expressed in seconds
-						//double vel = tec.getRobotMaxVelocity(robotID);
-						//double acc = tec.getRobotMaxAcceleration(robotID);
-						double vel = tec.getForwardModel(robotID).getVel();
-						double acc = tec.getForwardModel(robotID).getAcc();
+						double vel = tec.getRobotMaxVelocity(robotID);
+						double acc = tec.getRobotMaxAcceleration(robotID);
+						//double vel = tec.getForwardModel(robotID).getVel();
+						//double acc = tec.getForwardModel(robotID).getAcc();
 						double completionTime = computeArrivalTime(PAll[i][j][path],vel,acc) + taskQueue.get(j).getOperationTime();
 						tardiness = Math.max(0, (completionTime-deadline));
 						tardinessMatrix[i][j][path] = tardiness;

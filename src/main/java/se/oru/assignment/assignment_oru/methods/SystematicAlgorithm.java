@@ -37,15 +37,15 @@ import se.oru.assignment.assignment_oru.Task;
 import se.oru.coordination.coordination_oru.AbstractTrajectoryEnvelopeCoordinator;
 
 import se.oru.coordination.coordination_oru.CriticalSection;
-import se.oru.coordination.coordination_oru.IndexedDelay;
+import se.oru.assignment.assignment_oru.IndexedDelay;
 import se.oru.coordination.coordination_oru.Mission;
 
 import se.oru.coordination.coordination_oru.RobotReport;
 import se.oru.coordination.coordination_oru.TrajectoryEnvelopeCoordinator;
 
-import se.oru.coordination.coordination_oru.fleetmasterinterface.AbstractFleetMasterInterface;
-import se.oru.coordination.coordination_oru.fleetmasterinterface.FleetMasterInterface;
-import se.oru.coordination.coordination_oru.fleetmasterinterface.FleetMasterInterfaceLib.CumulatedIndexedDelaysList;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.AbstractFleetMasterInterface;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.FleetMasterInterface;
+import se.oru.assignment.assignment_oru.fleetmasterinterface.FleetMasterInterfaceLib.CumulatedIndexedDelaysList;
 
 
 import se.oru.coordination.coordination_oru.motionplanning.AbstractMotionPlanner;
@@ -162,7 +162,7 @@ public class SystematicAlgorithm extends AbstractOptimizationAlgorithm {
 			
 			//Add the constraint on cost for next solution
 			//add +0,005 in order for tolerance
-			optimizationProblem = oap.constraintOnCostSolution(optimizationProblem,costofAssignmentForConstraint);
+			//optimizationProblem = oap.constraintOnCostSolution(optimizationProblem,costofAssignmentForConstraint);
 			//Add the constraint to actual solution in order to consider this solution as already found  
 			optimizationProblem = oap.constraintOnPreviousSolution(optimizationProblem,AssignmentMatrix);
 			long timeOffsetFinal = Calendar.getInstance().getTimeInMillis();

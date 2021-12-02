@@ -22,8 +22,8 @@ import se.oru.coordination.coordination_oru.RobotReport;
 import se.oru.coordination.coordination_oru.demo.DemoDescription;
 
 import se.oru.coordination.coordination_oru.motionplanning.ompl.ReedsSheppCarPlanner;
-import se.oru.coordination.coordination_oru.simulation2D.TimedTrajectoryEnvelopeCoordinatorSimulation;
-
+//import se.oru.coordination.coordination_oru.simulation2D.TimedTrajectoryEnvelopeCoordinatorSimulation;
+import se.oru.coordination.coordination_oru.simulation2D.TrajectoryEnvelopeCoordinatorSimulation;
 import se.oru.coordination.coordination_oru.util.BrowserVisualization;
 
 import se.oru.coordination.coordination_oru.util.Missions;
@@ -46,7 +46,9 @@ public class TaskAssignmentMultiRobotsWithoutMap {
 		//Instantiate a timed trajectory envelope coordinator.
 		//You still need to add one or more comparators to determine robot orderings thru critical sections (comparators are evaluated in the order in which they are added)
 		//final TrajectoryEnvelopeCoordinatorSimulation tec = new TrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
-		final TimedTrajectoryEnvelopeCoordinatorSimulation tec = new TimedTrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
+		
+		//final TimedTrajectoryEnvelopeCoordinatorSimulation tec = new TimedTrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
+		final TrajectoryEnvelopeCoordinatorSimulation tec = new TrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
 		tec.addComparator(new Comparator<RobotAtCriticalSection> () {
 			@Override
 			public int compare(RobotAtCriticalSection o1, RobotAtCriticalSection o2) {
@@ -91,14 +93,14 @@ public class TaskAssignmentMultiRobotsWithoutMap {
 		
 		
 		tec.setDefaultFootprint(footprint1, footprint2, footprint3, footprint4);
-		tec.setForwardModel(1, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getTrackingPeriod()));
-		tec.setForwardModel(2, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getTrackingPeriod()));
-		tec.setForwardModel(3, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getTrackingPeriod()));
-		tec.setForwardModel(4, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getTrackingPeriod()));
-		tec.setForwardModel(5, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getTrackingPeriod()));
+		tec.setForwardModel(1, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getRobotTrackingPeriodInMillis(1)));
+		tec.setForwardModel(2, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getRobotTrackingPeriodInMillis(2)));
+		tec.setForwardModel(3, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getRobotTrackingPeriodInMillis(3)));
+		tec.setForwardModel(4, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getRobotTrackingPeriodInMillis(4)));
+		tec.setForwardModel(5, new ConstantAccelerationForwardModel(MAX_ACCEL, MAX_VEL, tec.getTemporalResolution(), tec.getControlPeriod(), tec.getRobotTrackingPeriodInMillis(5)));
 		
 		//Need to instantiate the fleetmaster interface
-		tec.instantiateFleetMaster(0.1, false);
+		//tec.instantiateFleetMaster(0.1, false);
 		
 		//Need to setup infrastructure that maintains the representation
 		tec.setupSolver(0, 100000000);
@@ -217,7 +219,7 @@ public class TaskAssignmentMultiRobotsWithoutMap {
 				//rsp.setMapResolution(res);
 				rsp.setPlanningTimeInSecs(2);
 				tec.setMotionPlanner(robotID, rsp);
-				tec.setNominalTrajectoryParameters(robotID, MAX_VEL, MAX_VEL, false, -1, -1, -1, MAX_ACCEL, -1, -1);
+				//tec.setNominalTrajectoryParameters(robotID, MAX_VEL, MAX_VEL, false, -1, -1, -1, MAX_ACCEL, -1, -1);
 				
 				
 		}
@@ -231,7 +233,7 @@ public class TaskAssignmentMultiRobotsWithoutMap {
 				{{1.0},{0.0},{0.0},{0.0},{0.0}}};
 		
 		//Solve the problem to find some feasible solution
-		double alpha = 1.0;
+		double alpha = 0.8;
 		
 		//tec.setFakeCoordinator(true);
 		//tec.setAvoidDeadlocksGlobally(true);

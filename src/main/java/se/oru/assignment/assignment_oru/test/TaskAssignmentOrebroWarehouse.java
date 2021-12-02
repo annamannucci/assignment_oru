@@ -21,7 +21,7 @@ import se.oru.coordination.coordination_oru.RobotReport;
 import se.oru.coordination.coordination_oru.demo.DemoDescription;
 import se.oru.coordination.coordination_oru.motionplanning.ompl.ReedsSheppCarPlanner;
 import se.oru.coordination.coordination_oru.motionplanning.ompl.ReedsSheppCarPlanner.PLANNING_ALGORITHM;
-import se.oru.coordination.coordination_oru.simulation2D.TimedTrajectoryEnvelopeCoordinatorSimulation;
+import se.oru.coordination.coordination_oru.simulation2D.TrajectoryEnvelopeCoordinatorSimulation;
 import se.oru.coordination.coordination_oru.util.BrowserVisualization;
 import se.oru.coordination.coordination_oru.util.Missions;
 import se.oru.assignment.assignment_oru.OptimizationProblem;
@@ -48,7 +48,8 @@ public class TaskAssignmentOrebroWarehouse {
 		
 		//Create a coordinator with interfaces to robots
 		//in the built-in 2D simulator
-		final TimedTrajectoryEnvelopeCoordinatorSimulation tec = new TimedTrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
+		//final TimedTrajectoryEnvelopeCoordinatorSimulation tec = new TimedTrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
+		final TrajectoryEnvelopeCoordinatorSimulation tec = new TrajectoryEnvelopeCoordinatorSimulation(MAX_VEL,MAX_ACCEL);
 		tec.addComparator(new Comparator<RobotAtCriticalSection> () {
 			@Override
 			public int compare(RobotAtCriticalSection o1, RobotAtCriticalSection o2) {
@@ -76,7 +77,7 @@ public class TaskAssignmentOrebroWarehouse {
 		tec.setNetworkParameters(NetworkConfiguration.PROBABILITY_OF_PACKET_LOSS, NetworkConfiguration.getMaximumTxDelay(), 0.01);		
 		
 		//Need to instantiate the fleetmaster interface
-		tec.instantiateFleetMaster(0.1, false);
+		//tec.instantiateFleetMaster(0.1, false);
 		
 		//Set up infrastructure that maintains the representation
 		tec.setupSolver(0, 100000000);
@@ -194,9 +195,9 @@ public class TaskAssignmentOrebroWarehouse {
 		int numPaths = 1;
 		
 		for (int robotID : tec.getIdleRobots()) {
-			tec.setNominalTrajectoryParameters(robotID, MAX_VEL, MAX_VEL, false, -1, -1, -1, MAX_ACCEL, -1, -1);
+			//tec.setNominalTrajectoryParameters(robotID, MAX_VEL, MAX_VEL, false, -1, -1, -1, MAX_ACCEL, -1, -1);
 			//Instantiate a simple motion planner (no map given here, otherwise provide yaml file)
-			ReedsSheppCarPlanner rsp = (ReedsSheppCarPlanner) rsp1.getCopy();
+			ReedsSheppCarPlanner rsp = (ReedsSheppCarPlanner) rsp1.getCopy(true);
 			tec.setMotionPlanner(robotID, rsp);
 		}
 		
