@@ -209,6 +209,10 @@ public class Task {
 		//Now you can do this: Missions.enqueue(task.getMissions());
 	}
 	
+	@Override
+	public String toString() {
+		return "Task" + this.getID() + ": " + StartPoint + " --> " + GoalPoint +  "  Type : " + robotTypes.toString()   +  (deadline != -1 ? " (deadline: " + deadline + ")" : "");
+	}
 	
 	
 }
