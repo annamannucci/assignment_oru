@@ -7,18 +7,19 @@ import java.util.Set;
 import org.apache.commons.lang.ArrayUtils;
 import org.metacsp.multi.spatioTemporal.paths.Pose;
 import org.metacsp.multi.spatioTemporal.paths.PoseSteering;
+
+import se.oru.assignment.assignment_oru.util.robotType.ROBOT_TYPE;
 import se.oru.coordination.coordination_oru.Mission;
-import se.oru.coordination.coordination_oru.util.Robot;
 
 
 public class Task {
 	
 	protected int taskID;
-	protected PoseSteering StartPoint;
-	protected PoseSteering GoalPoint;
+	protected PoseSteering startLocation;
+	protected PoseSteering goalLocation;
 	protected int decidedRobotID = -1;
 	protected List<PoseSteering[]> paths = null;
-	protected Set<Integer> robotTypes = null;
+	protected Set<ROBOT_TYPE> robotTypes = null;
 	protected double deadline = -1;
 	protected double operationTime = 0;
 	protected boolean priority = false;
@@ -35,7 +36,7 @@ public class Task {
 	 * @param GoalPose -> Task Ending Position
 	 * @param robotTypes -> robot type that can execute this task
 	 */
-	public Task (int taskID,Pose StartPose, Pose GoalPose, int ... robotTypes) {
+	public Task (int taskID,Pose StartPose, Pose GoalPose, ROBOT_TYPE ... robotTypes) {
 		this(taskID,-1,new PoseSteering(StartPose, 0.0), new PoseSteering(GoalPose, 0.0),robotTypes);
 	}
 
@@ -48,7 +49,7 @@ public class Task {
 	 * @param GoalPose -> Task Ending Position
 	 * @param robotTypes -> robot type that can execute this task
 	 */
-	public Task (int taskID,double deadline,Pose StartPose, Pose GoalPose, int ... robotTypes) {
+	public Task (int taskID,double deadline,Pose StartPose, Pose GoalPose, ROBOT_TYPE ... robotTypes) {
 		this(taskID,deadline,new PoseSteering(StartPose, 0.0), new PoseSteering(GoalPose, 0.0),robotTypes);
 	}
 
@@ -63,14 +64,14 @@ public class Task {
 	 * @param deadline -> deadline of Task
 	 * @param robotTypes -> robot type that can execute this task
 	 */
-	public Task (int taskID,PoseSteering StartPose, PoseSteering GoalPose, int ... robotTypes) {
+	public Task (int taskID,PoseSteering StartPose, PoseSteering GoalPose, ROBOT_TYPE ... robotTypes) {
 		this.taskID = taskID;
-		this.StartPoint = StartPose;
-		this.GoalPoint = GoalPose;
+		this.startLocation = StartPose;
+		this.goalLocation = GoalPose;
 
 		if (robotTypes.length == 0) throw new Error("Need to specifiy at least one robot type!");
-		this.robotTypes = new HashSet<Integer>();
-		for (int rt : robotTypes) this.robotTypes.add(rt);
+		this.robotTypes = new HashSet<ROBOT_TYPE>();
+		for (ROBOT_TYPE rt : robotTypes) this.robotTypes.add(rt);
 	}
 	
 	/**
@@ -83,14 +84,14 @@ public class Task {
 	 * @param deadline -> deadline of Task
 	 * @param robotTypes -> robot type that can execute this task
 	 */
-	public Task (int taskID,double deadline, PoseSteering StartPose, PoseSteering GoalPose, int ... robotTypes) {
+	public Task (int taskID,double deadline, PoseSteering StartPose, PoseSteering GoalPose, ROBOT_TYPE ... robotTypes) {
 		this.taskID = taskID;
-		this.StartPoint = StartPose;
-		this.GoalPoint = GoalPose;
+		this.startLocation = StartPose;
+		this.goalLocation = GoalPose;
 		this.deadline = deadline;
 		if (robotTypes.length == 0) throw new Error("Need to specifiy at least one robot type!");
-		this.robotTypes = new HashSet<Integer>();
-		for (int rt : robotTypes) this.robotTypes.add(rt);
+		this.robotTypes = new HashSet<ROBOT_TYPE>();
+		for (ROBOT_TYPE rt : robotTypes) this.robotTypes.add(rt);
 	}
 
 	public List<PoseSteering[]> getPaths() {
@@ -113,19 +114,19 @@ public class Task {
 	}
 	
 	public Pose getStartPose() {
-		return this.StartPoint.getPose();		
+		return this.startLocation.getPose();		
 	}
 	
 	public Pose getGoalPose() {
-		return this.GoalPoint.getPose();	
+		return this.goalLocation.getPose();	
 	}
 
 	public PoseSteering getStart() {
-		return this.StartPoint;		
+		return this.startLocation;		
 	}
 	
 	public PoseSteering getGoal() {
-		return this.GoalPoint;	
+		return this.goalLocation;	
 	}
 	
 	public boolean isPriority() {
@@ -146,8 +147,14 @@ public class Task {
 	}
 	
 
-	public boolean isCompatible(Robot robot) {
-		return this.robotTypes.contains(robot.getRobotType());
+	public boolean isCompatible(ROBOT_TYPE robotType) {
+		boolean compatible = false;
+		
+		if (this.robotTypes.contains(robotType)) {
+			compatible = true;
+		}
+		
+		return compatible;
 	}
 	
 	public boolean isTaskAssigned() {
@@ -186,8 +193,14 @@ public class Task {
 		return this.operationTime;
 	}
 	
+	
+	public String toString() {
+		return "Task " + taskID +" info: " + "From location: " + this.startLocation + " to Goal Location: " + this.goalLocation + (deadline != -1 ? " (deadline: " + deadline + ")" : "");
+	}
+	
+	
 	public void getInfo() {
-		System.out.println("Starting Pose -> " +this.StartPoint + "\n Goal Pose ->"+ this.GoalPoint + "\n Robot Types ->"+ this.robotTypes
+		System.out.println("Starting Pose -> " +this.startLocation + "\n Goal Pose ->"+ this.goalLocation + "\n Robot Types ->"+ this.robotTypes
 				+"\n Task is Assigned "+ this.isTaskAssigned());
 	}
 	
@@ -209,10 +222,6 @@ public class Task {
 		//Now you can do this: Missions.enqueue(task.getMissions());
 	}
 	
-	@Override
-	public String toString() {
-		return "Task" + this.getID() + ": " + StartPoint + " --> " + GoalPoint +  "  Type : " + robotTypes.toString()   +  (deadline != -1 ? " (deadline: " + deadline + ")" : "");
-	}
 	
 	
 }
