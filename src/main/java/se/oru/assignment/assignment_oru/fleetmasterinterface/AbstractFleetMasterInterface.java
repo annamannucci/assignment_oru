@@ -56,6 +56,7 @@ public abstract class AbstractFleetMasterInterface {
 	static {
 		NativeLibrary.addSearchPath("fleetmaster", "FleetMasterInterface"); //FIXME How to add the path of the library? Now it is in {$FLEETMASTER_WS}/devel
 		INSTANCE = Native.loadLibrary("fleetmaster", FleetMasterInterfaceLib.class);
+		 
 	}
 	
 
