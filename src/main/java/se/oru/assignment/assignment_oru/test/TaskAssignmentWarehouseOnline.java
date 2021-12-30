@@ -92,7 +92,7 @@ public class TaskAssignmentWarehouseOnline {
 		
 		//Start a visualization (will open a new browser tab)
 		BrowserTaskVisualization viz = new BrowserTaskVisualization();
-		viz.setMap(yamlFile);
+		//viz.setMap(yamlFile);
 		viz.setInitialTransform(25, 6.1, 6.8);
 		tec.setVisualization(viz);
 		tec.setBreakDeadlocks(true, false, false);
