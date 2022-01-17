@@ -283,70 +283,46 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		double sumArrivalTime = 0;
 		double [][][] PAll = new double[numRobotAug][numTaskAug][alternativePaths];
 		
-		
-		
 		long timeInitial = Calendar.getInstance().getTimeInMillis();
 		if(scenario != null) {
 			double [][][] PAllScenario = evaluatePAllWithScenario();
 			return PAllScenario;
 		}
+		
 		for (int robotID : robotsIDs) {
-			
-			//double maxPathLength = 1;
-			//int robotIndex = robotsIDs.indexOf(robotID);
 			for (int taskID : tasksIDs ) {
 				int taskIndex = tasksIDs.indexOf(taskID);
-				
 				//Evaluate path Length
-				boolean typesAreEqual = false;
-				 if (IDsIdleRobots.contains(robotID) && realTasksIDs.contains(taskID) ) {
-				 //typesAreEqual = taskQueue.get(taskIndex).isCompatible(coordinator.getRobot(robotID)); getRobotTypes
-				 typesAreEqual = taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID));
-				 }
-				 else {
-					 //Considering a dummy robot or  a dummy task -> they don't have type
-					 typesAreEqual = true;
-				 }
+				boolean typesAreEqual = (IDsIdleRobots.contains(robotID) && realTasksIDs.contains(taskID)) ? 
+						taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID)) : true; //Considering a dummy robot or  a dummy task -> they don't have type
 				 for(int path = 0;path < alternativePaths; path++) {
 					 final int pathID = path;
 					  if(typesAreEqual) { // only if robot and task have the same types
-	
-						 
-						    // evaluatePathLength(robotID,taskID,pathID,tec);	
 							new Thread("Robot" + robotID) {
 								public void run() {
-										evaluatePathLength(robotID,taskID,pathID);								
+										evaluatePathLength(robotID, taskID, pathID);								
 								}		
-							}.start();
-							//Take time to evaluate the path
-				
+							}.start(); //Take time to evaluate the path
 					}			 
-					 else {
-							 pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, null);		
-					 }	
-					}
-			}//For Task
-	
+					 else 
+						pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, null);
+				}
+			}
 		}
 		boolean allResultsReady = false;
-		while (!allResultsReady) {
+		while(!allResultsReady) {
 			allResultsReady = true;
-			
-			for (int robotID : IDsIdleRobots) {
+			for(int robotID : IDsIdleRobots) {
 				for (int task : tasksIDs) {
 					for(int path=0;path < alternativePaths ; path ++) {
 						if (!pathsToTargetGoal.containsKey(robotID*numTaskAug*alternativePaths+task*alternativePaths+path) )  {
 							allResultsReady = false;
 						}
 					}
-					
 				}
 				try { Thread.sleep(500); }
-				catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				}
-				
+				catch (InterruptedException e) { e.printStackTrace(); }
+			}	
 		}
 		metaCSPLogger.severe("All paths are computed.");
 		long timeFinal = Calendar.getInstance().getTimeInMillis();
@@ -360,77 +336,52 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				int taskIndex = tasksIDs.indexOf(taskID);
 				double pathLength = Double.POSITIVE_INFINITY;
 				//Evaluate path Length
-				boolean typesAreEqual = false;
-				 if (taskIndex < numberTasks && robotindex < numberRobots ) {
-				 //typesAreEqual = taskQueue.get(taskIndex).isCompatible(coordinator.getRobot(robotID));
-				 typesAreEqual = taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID));
-				 }
-				 else {
-					 //Considering a dummy robot or  a dummy task -> they don't have type
-					 typesAreEqual = true;
-				 }
+				boolean typesAreEqual = (taskIndex < numberTasks && robotindex < numberRobots) ? 
+						taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID)) : true; //true := considering dummy robot and tasks
 				 for(int path = 0;path < alternativePaths; path++) {
 					 if(typesAreEqual) { 
 						if(pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path) != null) {
 							pathLength = Missions.getPathLength(pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path));
 						}
-						if ( pathLength > maxPathLength && pathLength != Double.POSITIVE_INFINITY) {
+						if ( pathLength > maxPathLength && pathLength != Double.POSITIVE_INFINITY)
 								maxPathLength = pathLength;
-						}
 					}
-					 
-					 PAll[robotindex][taskIndex][path] = pathLength;
-				}//For path
-			}//For task
+					PAll[robotindex][taskIndex][path] = pathLength;
+				}
+			}
 			//Sum the max path length for each robot
 			sumPathsLength += maxPathLength;
 			//Sum the arrival time for the max path length
 			sumArrivalTime += computeArrivalTime(maxPathLength,this.slowestRobotVelocity,this.slowestRobotAcceleration);
-			}
+		}
 		//Take the time to fill in the PAll Matrix
-		long timeFinal2 = Calendar.getInstance().getTimeInMillis();
-		long timeRequired2 = timeFinal2- timeInitial2;
-		timeRequiretofillInPall = timeRequiretofillInPall + timeRequired2;
+		timeRequiretofillInPall += Calendar.getInstance().getTimeInMillis() - timeInitial2;
 		double [][][] PAllAug =  checkTargetGoals(PAll);
 		//Save the sum of max paths length to normalize path length cost
 		this.sumMaxPathsLength = sumPathsLength;
 		//Save the sum of arrival time considering max paths length to normalize delay cost
 		this.sumArrivalTime = sumArrivalTime;
 		//Return the cost of path length
-		//metaCSPLogger.info("Scenario is saved with name" + " scenario#" + numAllocation);
-		//Missions.saveScenario("scenario# "+ numAllocation);
-		if(saveFutureAllocations == true) {
-			numAllocation += 1;
-		}
+		if(saveFutureAllocations == true) numAllocation += 1;
 		
 		//Remove all the missions from Missions set stored in the coordinator.
 		for (int robotID : IDsIdleRobots) {
 			int cont = 0;
-			//for (int taskID : tasksIDs ) {
 				if(Missions.getMissions(robotID) != null){
 					if(cont < Missions.getMissions(robotID).size()) {
 						Mission m1 = Missions.getMission(robotID, cont);
 						Missions.removeMissions(m1);
-				 		
-				 		//cont +=1;
 					}
 				}
-				
-			//}
-			
 		}
 		return PAllAug;
-		}
-	
-	
-	
-	
+	}
 	
 	protected synchronized double evaluatePathLength(int robotID , int taskID, int alternativePath){
 		//Evaluate the path length for the actual couple of task and ID
 		//Initialize the path length to infinity
 		double pathLength = Double.POSITIVE_INFINITY;
-		//take index positon of robotID in Robot set
+		//take index position of robotID in Robot set
 		int robotindex = IDsIdleRobots.indexOf(robotID);
 		// Only for real robots and tasks
 		if (IDsIdleRobots.contains(robotID) && realTasksIDs.contains(taskID)) {
@@ -447,32 +398,21 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 			rsp.setStart(rr.getPose());
 			rsp.setGoals(taskQueue.get(taskIndex).getStartPose(),taskQueue.get(taskIndex).getGoalPose());
 			rsp.setFootprint(coordinator.getFootprint(robotID));
-			
 			if (!rsp.plan()) {
 				System.out.println("Robot" + robotID +" cannot reach the Target End of Task " + taskID);
 				//the path to reach target end not exits
 				pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+alternativePath, null);		
-				//Infinity cost is returned 
-				
-				return pathLength;
-				
-			}			
-			//If the path exists
-			//Take the Pose Steering representing the path
+				return pathLength; //Infinity cost is returned 
+			}	
+			
+			//If the path exists, ...
 			PoseSteering[] pss = rsp.getPath();
-			
-			System.out.println("Robot " +robotID +" taskID "+ taskID +" throw Path " + pss[pss.length-1].getX() + " " + pss[pss.length-1].getY() + " " + pss[pss.length-1].getTheta());
-			
-			
-			//Add the path to the FleetMaster Interface -> this is necessary for F function
+			System.out.println("Robot " +robotID +" taskID "+ taskID +" throw Path " + pss[pss.length-1].getX() + " " + pss[pss.length-1].getY() + " " + pss[pss.length-1].getTheta());			
+			//Add the path to the FleetMaster Interface (this is necessary for F function)
 			addPath(robotID, pss.hashCode(), pss, null, coordinator.getFootprint(robotID)); 
-			//SpatialEnvelope se1 = TrajectoryEnvelope.createSpatialEnvelope(pss,tec.getFootprint(robotID));
-			//Geometry kk = se1.getPolygon();
-			//addPath(robotID, pss.hashCode(), pss, kk, tec.getFootprint(robotID));
 			
 			//Save the path to Task in the path set
 			pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+alternativePath, pss);
-			//Take the Path Length
 			Mission m1 = new Mission(robotID,pss);
 			Missions.enqueueMission(m1);
 			pathLength = Missions.getPathLength(pss);
@@ -502,10 +442,8 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+alternativePath, dummyTask);		
 				//Consider a minimal pathLength
 				pathLength = 1;
-				Mission m1 = new Mission(robotID,dummyTask);
+				Mission m1 = new Mission(robotID, dummyTask);
 				Missions.enqueueMission(m1);
-		
-				return pathLength;
 			}
 			else { //There are considered dummy robot and real task
 				//dummy robot -> Consider a only virtual Robot 
@@ -513,17 +451,12 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				dummyRobot[0] = new PoseSteering(taskQueue.get(0).getGoalPose(),0);
 				pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+alternativePath, dummyRobot);
 				pathLength = 1;
-				Mission m1 = new Mission(robotID,dummyRobot);
+				Mission m1 = new Mission(robotID, dummyRobot);
 				Missions.enqueueMission(m1);
-				return pathLength;
 			}	
 		}
 		return pathLength;
 	}
-	
-
-	
-	
 	
 	/**
 	 * Evaluate the 3D matrix Pall for all the possible combination of paths p_ij to reach a task j for a robot i, using a pre-computed Scenario
@@ -547,72 +480,51 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				double pathLength = Double.POSITIVE_INFINITY;
 				//Evaluate path Length
 				boolean typesAreEqual = false;
-				 if (taskIndex < numberTasks && robotindex < numberRobots ) {
-				 //typesAreEqual = taskQueue.get(taskIndex).isCompatible(coordinator.getRobot(robotID));
-				 typesAreEqual = taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID));
-				 
-				 }
-				 else {
+				 if (taskIndex < numberTasks && robotindex < numberRobots ) 
+					 typesAreEqual = taskQueue.get(taskIndex).isCompatible(getRobotTypes(robotID));
+				 else 
 					 //Considering a dummy robot or  a dummy task -> same types since there are fictitious 
 					 typesAreEqual = true;
-				 }
+
 				 for(int path = 0;path < alternativePaths; path++) {
 					 if(typesAreEqual) { //try to find the mission only if robot and task are of same types  
 				
-						 	int missionNumber = 0;
-						 	
-						 	
-						 	//if(IDsIdleRobots.contains(robotID)&& taskIndex < taskQueue.size()) {
+						 	int missionNumber = 0;						 	
 						 	if(IDsIdleRobots.contains(robotID) && taskIndex < taskQueue.size()) {
+						 		boolean finalPositionX, finalPositionY, initialPositionX, initialPositionY;
 						 		
 						 		while(missionNumber < Missions.getMissions(robotID).size() ) {
-						 		//while(Missions.getMissions(robotID).size() != 0 ) {
-						 			boolean finalPositionX = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getToPose().getX(),taskQueue.get(taskIndex).getGoalPose().getX());
-						 			boolean finalPositionY = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getToPose().getY(),taskQueue.get(taskIndex).getGoalPose().getY());
-						 			boolean initialPositionX = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getFromPose().getX(),coordinator.getRobotReport(robotID).getPose().getX());
-						 			boolean initialPositionY = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getFromPose().getY(),coordinator.getRobotReport(robotID).getPose().getY());
+						 			finalPositionX = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getToPose().getX(),taskQueue.get(taskIndex).getGoalPose().getX());
+						 			finalPositionY = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getToPose().getY(),taskQueue.get(taskIndex).getGoalPose().getY());
+						 			initialPositionX = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getFromPose().getX(),coordinator.getRobotReport(robotID).getPose().getX());
+						 			initialPositionY = ArrayUtils.isEquals(Missions.getMission(robotID, missionNumber).getFromPose().getY(),coordinator.getRobotReport(robotID).getPose().getY());
 						 			//FIXME Missing check on steering -> it may introduce some errors 
 						 			
-						 			
-						 			//if( ArrayUtils.isEquals(Missions.getMission(robotID, cont).getToPose().toString(),taskQueue.get(taskIndex).getGoalPose().toString())) {
-						 			if( initialPositionX && initialPositionY && finalPositionX && finalPositionY) {
+						 			if(initialPositionX && initialPositionY && finalPositionX && finalPositionY) {
 						 				PoseSteering[] pss = Missions.getMission(robotID, missionNumber).getPath();
 							 			addPath(robotID, pss.hashCode(), pss, null, coordinator.getFootprint(robotID));
 							 			pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, pss);
 										pathLength = Missions.getPathLength(pss);
-						
 							 		 }
-						 			missionNumber +=1;
-							 		
-							 		
+						 			missionNumber +=1;	
 							 	}
-						 	}else {
+						 	} else {
+						 		PoseSteering[] pss = null;
 						 		if (numberRobots >= numberTasks && IDsIdleRobots.contains(robotID)){
-						 			PoseSteering[] pss = new PoseSteering[] {new PoseSteering(coordinator.getRobotReport(robotID).getPose(),0)};
-						 			pathLength =1 ;
-						 			pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, pss);
-						 			//Missions.removeMissions(Missions.getMission(robotID, cont));
+						 			pss = new PoseSteering[] {new PoseSteering(coordinator.getRobotReport(robotID).getPose(),0)};
 						 			missionNumber += 1;
-						 			
-						 			
-						 		}else {
-						 			PoseSteering[] pss = new PoseSteering[] {new PoseSteering(taskQueue.get(0).getGoalPose(),0)};
-						 			pathLength =1 ;
-						 			pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, pss);
-						 		}
+						 		} 
+						 		else 
+						 			pss = new PoseSteering[] {new PoseSteering(taskQueue.get(0).getGoalPose(),0)};
+					 			pathLength = 1;
+					 			pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, pss);
 						 	}
 
-							
-							
-						
-						 if ( pathLength > maxPathLength && pathLength != Double.POSITIVE_INFINITY) {
-								maxPathLength = pathLength;
-							}
-					}else {
-						 pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, null);		
-					}
-	
-					 PAll[robotindex][taskIndex][path] = pathLength;
+						 if(pathLength > maxPathLength && pathLength != Double.POSITIVE_INFINITY) maxPathLength = pathLength;
+					} 
+					else 
+						pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+path, null);
+					PAll[robotindex][taskIndex][path] = pathLength;
 				}//For path
 			}//For task
 
@@ -628,9 +540,8 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		this.sumArrivalTime = sumArrivalTime;
 		
 		//Return the cost of path length	
-
 		return PAllAug;
-		}
+	}
 	
 	
 	
@@ -648,8 +559,7 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 	protected double evaluatePathDelay(int robotID ,int taskID,int pathID,double [][][] assignmentMatrix){
 		CriticalSection[][][][] cssMatrix = new CriticalSection [IDsIdleRobots.size()][realTasksIDs.size()][alternativePaths][1];
 
-		long timeInitial2 = 0;
-
+		long startTime = 0;
 		int robotIndex = robotsIDs.indexOf(robotID);
 		int taskIndex = tasksIDs.indexOf(taskID);
 		//Evaluate the delay time on completion time for the actual couple of task and ID
@@ -661,17 +571,14 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 			// Only for real robots and tasks
 			if (IDsIdleRobots.contains(robotID) && realTasksIDs.contains(taskID)) {
 				//Take the Pose steering relate to i-th robot and j-th task from path set
-				//PoseSteering[] pss1 = pathsToTargetGoalTotal.get((robot-1)*numTaskAug*maxNumPaths + task*maxNumPaths +pathID);
 				PoseSteering[] pss1 = pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+pathID);
-				if(pss1 == null) {
-					return delay;
-				}
+				if(pss1 == null) return delay;
 				
 				//Initialize Array of delays for the two robots
-				TreeSet<IndexedDelay> te1TCDelays = new TreeSet<IndexedDelay>() ;
-				TreeSet<IndexedDelay> te2TCDelays = new TreeSet<IndexedDelay>() ;
-				//Compute the spatial Envelope for the i-th Robot
+				TreeSet<IndexedDelay> te1TCDelays = new TreeSet<IndexedDelay>();
+				TreeSet<IndexedDelay> te2TCDelays = new TreeSet<IndexedDelay>();
 				
+				//Compute the spatial Envelope for the i-th Robot
 				SpatialEnvelope se1 = TrajectoryEnvelope.createSpatialEnvelope(pss1,coordinator.getFootprint(robotID));
 				//Evaluate other path depending from the Assignment Matrix
 				for(int secondRobotID : IDsIdleRobots) {
@@ -679,66 +586,29 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 					for(int secondTaskID: realTasksIDs) {
 						int secondTaskIndex = realTasksIDs.indexOf(secondTaskID);
 						 for(int s = 0;s < alternativePaths; s++) {
-							
 							 if (assignmentMatrix [secondRobotIndex][secondTaskIndex][s] > 0 && secondRobotID != robotID && secondTaskID != taskID) {
 									//Take the path of this second robot from path set
-									
 								 	PoseSteering[] pss2 = pathsToTargetGoal.get(secondRobotID*numTaskAug*alternativePaths  + secondTaskID*alternativePaths+s);
-									if (pss2 != null) {//is == null if robotType is different to Task type
-										
-										 
+									if (pss2 != null) {//is == null if robotType is different to Task type 
 										//Evaluate the Spatial Envelope of this second Robot
 										SpatialEnvelope se2 = TrajectoryEnvelope.createSpatialEnvelope(pss2,coordinator.getFootprint(secondRobotID));
 										long timeInitial = Calendar.getInstance().getTimeInMillis();
 										//Compute the Critical Section between this 2 robot
 										CriticalSection [] css = new CriticalSection[1];
-										
-										/*
-										
-										if(criticalSections.containsKey(robotID*numTaskAug*maxNumPaths+taskID*maxNumPaths+pathID) ) {
-											css= criticalSections.get(robotID*numTaskAug*maxNumPaths+taskID*maxNumPaths+pathID)[secondRobotIndex][secondTaskIndex][s];
-											if(css.length == 1) {
-												css = AbstractTrajectoryEnvelopeCoordinator.getCriticalSections(se1, se2,true, Math.min(tec.getFootprintPolygon(robotID).getArea(),tec.getFootprintPolygon(secondRobotID).getArea()));
-												
-											}
-										}else {
-											css = AbstractTrajectoryEnvelopeCoordinator.getCriticalSections(se1, se2,true, Math.min(tec.getFootprintPolygon(robotID).getArea(),tec.getFootprintPolygon(secondRobotID).getArea()));
-											cssMatrix[secondRobotIndex][secondTaskIndex][s] = css;
-											criticalSections.put(robotID*numTaskAug*maxNumPaths+taskID*maxNumPaths+pathID, cssMatrix);
-											//Evaluate the time to compute critical Section
-											long timeFinal = Calendar.getInstance().getTimeInMillis();
-											 long timeRequired = timeFinal- timeInitial;
-											 timeRequiretoComputeCriticalSection = timeRequiretoComputeCriticalSection + timeRequired;
-											 fileStream1.println(timeRequired+"");
-					
-										}
-										
-										*/
-										
-										
 										css = AbstractTrajectoryEnvelopeCoordinator.getCriticalSections(se1, se2,true, Math.min(coordinator.getFootprintPolygon(robotID).getArea(),coordinator.getFootprintPolygon(secondRobotID).getArea()));
 										cssMatrix[secondRobotIndex][secondTaskIndex][s] = css;
-										//criticalSections.put(robotID*numTaskAug*maxNumPaths+taskID*maxNumPaths+pathID, cssMatrix);
-										//Evaluate the time to compute critical Section
-										long timeFinal = Calendar.getInstance().getTimeInMillis();
-										 long timeRequired = timeFinal- timeInitial;
-										 timeRequiretoComputeCriticalSection = timeRequiretoComputeCriticalSection + timeRequired;
-										 //fileStream1.println(timeRequired+"");
 										
-										 
-										 timeInitial2 = Calendar.getInstance().getTimeInMillis();
+										//Evaluate the time to compute critical Section
+										 timeRequiretoComputeCriticalSection += Calendar.getInstance().getTimeInMillis() - timeInitial;
+										 startTime = Calendar.getInstance().getTimeInMillis();
 										//Compute the delay due to precedence constraint in Critical Section
 										for (int g = 0; g < css.length; g++) {
 											Pair<Double, Double> a1 = estimateTimeToCompletionDelays(pss1.hashCode(),pss1,te1TCDelays,pss2.hashCode(),pss2,te2TCDelays, css[g]);
 											double delayCriticalSection = Math.min(a1.getFirst(), a1.getSecond());
-											//fileStream3.println(a1.getFirst() + " " +  a1.getSecond() + " " + robotID + " " + secondRobotID+ " ");
-											if(delayCriticalSection < 0 ) {
-												delay += 0;
-											}else if(delayCriticalSection == Double.POSITIVE_INFINITY) {
+											if(delayCriticalSection < 0) delay += 0;
+											else if(delayCriticalSection == Double.POSITIVE_INFINITY)
 												delay += 10000;
-											}else {
-												delay += delayCriticalSection;
-											}
+											else delay += delayCriticalSection;
 										}
 
 								
@@ -750,70 +620,44 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 							    	for (int b = 0; b < cssDrivingRobot.length; b++) {
 										Pair<Double, Double> a1 = estimateTimeToCompletionDelays(pss1.hashCode(),pss1,te1TCDelays,pathsDrivingRobots.get(k).getPath().hashCode(),pathsDrivingRobots.get(k).getPath(),te2TCDelays, cssDrivingRobot[b]);
 										double delayCriticalSection = Math.min(a1.getFirst(), a1.getSecond());
-										if(delayCriticalSection < 0 ) {
+										if(delayCriticalSection < 0) {
 											delay += 0;
-										}else if(delayCriticalSection == Double.POSITIVE_INFINITY) {
+										} else if(delayCriticalSection == Double.POSITIVE_INFINITY) {
 											delay += 10000;
-										}else {
+										}else 
 											delay += delayCriticalSection;
-										}
 									}
 							    }
-							    
-							    
-							    long timeFinal2 = Calendar.getInstance().getTimeInMillis();
-								long timeRequired2 = timeFinal2- timeInitial2;
-								timeRequiretoComputePathsDelay = timeRequiretoComputePathsDelay + timeRequired2;
-								//fileStream2.println(timeRequired2+"");
+								timeRequiretoComputePathsDelay += Calendar.getInstance().getTimeInMillis() - startTime;
 								}
 							} 
 						 }	
 				}	
 			}
-				//fileStream3.println(" ");
 				
 			} else { //There also virtual robot and task are considered
 				//the delay associated to dummy robot and task is considerd 0
 				return delay;
 			}
 		}
-		
 		//return the delay for the i-th robot and the j-th task due to interference with other robots
 		return delay;
-		}
-	
+	}
 	
 	
 	public double evaluateInterferenceCost(int robotID ,int taskID,int pathID,double [][][] assignmentMatrix) {
-		
-		double pathDelayCost = evaluatePathDelay(robotID,taskID,pathID,assignmentMatrix)/sumArrivalTime;
-		return pathDelayCost;
+		return evaluatePathDelay(robotID, taskID, pathID, assignmentMatrix)/sumArrivalTime;
 	}
-	
 	
 	
 	protected double computeArrivalTime(double pathLength,double vel,double acc){
 		//Compute the arrival time of this path, considering a robot alone with a velocity trapezoidal model
-		
-		if(this.slowestRobotAcceleration == 0 && this.slowestRobotVelocity == 0) {
+		if(this.slowestRobotAcceleration == 0 && this.slowestRobotVelocity == 0)
 			computeMaxVelandAccel();
-		}
-		
-		if(pathLength == Double.POSITIVE_INFINITY) {
-			pathLength = Integer.MAX_VALUE;
-		}
-		double Pmax = Math.pow(vel, 2)/(2*acc);
-		double arrivalTime = 1;
-		if(pathLength > Pmax) {
-			//Use trapezoidal profile
-			 arrivalTime = pathLength/vel + vel/acc;
-		}else {
-			 arrivalTime = (2*pathLength)/vel;
-		}
-		//Return the arrival time 
-		return arrivalTime;
+		if(pathLength == Double.POSITIVE_INFINITY) 	pathLength = Integer.MAX_VALUE;
+		return (pathLength > Math.pow(vel, 2)/(2*acc)) ? pathLength/vel + vel/acc : 2*pathLength/vel;
 	}
-	
+
 	
 	/**
 	 * Compute the nominal (i.e. suppose that the robot is alone in the map) arrival time (i.e. time to reach the target position of a task). 
@@ -838,25 +682,6 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		//Return the arrival time 
 		return arrivalTimeMatrix;
 	}
-	
-	
-
-/*	
-	protected double computeTardiness(int robotID,int taskID,double pathLength) {
-		double tardiness = 0;
-		if(realTasksIDs.contains(taskID)) {
-			int taskIndex = realTasksIDs.indexOf(taskID);
-			if (taskQueue.get(taskIndex).isDeadlineSpecified()) { // Compute tardiness only if specified in task constructor
-				double deadline = taskQueue.get(taskIndex).getDeadline();  //Expressed in seconds
-				double vel = coordinator.getRobotMaxVelocity(robotID);
-				double acc = coordinator.getRobotMaxAcceleration(robotID);
-				double completionTime = computeArrivalTime(pathLength,vel,acc) + taskQueue.get(taskIndex).getOperationTime();
-				tardiness = Math.max(0, (completionTime-deadline));
-			}	
-		}
-		return tardiness;
-	}
-*/	
 	
 	/**
 	 * Evaluate the tardiness in completion of a task, for all the task set . The tardiness is the defined as the further time required to complete a task
@@ -891,34 +716,7 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		}
 		return tardinessMatrix;
 	}
-	/*
-	protected double[][][] computeTardinessFleet(double [][][]PAll,AbstractTrajectoryEnvelopeCoordinator tec) {
-		double tardiness = 0;
-		
-		double [][][] tardinessMatrix = new double [numRobotAug][numTaskAug][maxNumPaths];
-		for (int robotID : IDsIdleRobots ) {
-			int i = robotsIDs.indexOf(robotID);
-			for (int taskID : realTasksIDs ) {
-				int j = tasksIDs.indexOf(taskID);
-					for(int path = 0;path < maxNumPaths; path++) {
-					if (taskQueue.get(j).isDeadlineSpecified()) { // Compute tardiness only if specified in task constructor
-						double deadline = taskQueue.get(j).getDeadline();  //Expressed in seconds
-						double vel = tec.getRobotMaxVelocity(robotID);
-						double acc = tec.getRobotMaxAcceleration(robotID);
-						//double vel = tec.getForwardModel(robotID).getVel();
-						//double acc = tec.getForwardModel(robotID).getAcc();
-						double completionTime = computeArrivalTime(PAll[i][j][path],vel,acc) + taskQueue.get(j).getOperationTime();
-						tardiness = Math.max(0, (completionTime-deadline));
-						tardinessMatrix[i][j][path] = tardiness;
-						sumTardiness += tardiness;
-					}	
-				}
-				
-			}
-		}
-		return tardinessMatrix;
-	}
-	*/
+
 	/**
 	 * Evaluate the overall B function, that is the function that consider interference free costs
 	 * Costs considered:
@@ -939,9 +737,7 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 					for(int path = 0;path < alternativePaths; path++) {
 						BFunction[i][j][path] = pathLengthWeight*PAll[i][j][path]/sumMaxPathsLength + tardinessWeight*tardinessMatrix[i][j][path]/sumTardiness + arrivalTimeWeight*arrivalTimeMatrix[i][j][path]/sumArrivalTime;
 						interferenceFreeCostMatrix[i][j][path] = BFunction[i][j][path];
-						//costValuesMatrix[i][j][path] =  PAll[i][j][path]/sumMaxPathsLength+ tardinessMatrix[i][j][path]/sumTardiness + arrivalTimeMatrix[i][j][path]/sumArrivalTime;
 					}
-					
 				}
 			}
 		}
@@ -950,16 +746,11 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				for (int j = 0 ; j < numTaskAug; j++) {
 					for(int path = 0;path < alternativePaths; path++) {
 						BFunction[i][j][path] = pathLengthWeight*PAll[i][j][path]/sumMaxPathsLength+ tardinessWeight*tardinessMatrix[i][j][path]/sumTardiness;
-						//costValuesMatrix[i][j][path] = PAll[i][j][path]/sumMaxPathsLength+ tardinessMatrix[i][j][path]/sumTardiness;
 						interferenceFreeCostMatrix[i][j][path] = BFunction[i][j][path] ;
 					}
-					
-
-	
 				}
 			}
 		}
-		
 		return BFunction;
 	}
 	
@@ -974,59 +765,44 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 	 */
 	protected MPSolver buildOptimizationProblem() {
 		//Initialize a linear solver 
-		
-		
 		MPSolver optimizationProblem = new MPSolver(
 				"TaskAssignment", MPSolver.OptimizationProblemType.CBC_MIXED_INTEGER_PROGRAMMING);
-		
-		//MPSolver optimizationProblem = new MPSolver(
-				//"TaskAssignment", MPSolver.OptimizationProblemType.CBC_MIXED_INTEGER_PROGRAMMING);
-		//START DECISION VARIABLE VARIABLE
+
+		//Set a decision variable
 		MPVariable [][][] decisionVariable = new MPVariable[numRobotAug][numTaskAug][alternativePaths];
-		for (int i = 0; i < numRobotAug; i++) {
-			 for (int j = 0; j < numTaskAug; j++) {
-				 for(int s = 0; s < alternativePaths; s++) {
-					 decisionVariable[i][j][s] = optimizationProblem.makeBoolVar("x"+"["+i+","+j+","+s+"]");
-					
-				 }
-				
+		for(int i = 0; i < numRobotAug; i++) {
+			 for(int j = 0; j < numTaskAug; j++) {
+				 for(int s = 0; s < alternativePaths; s++)
+					 decisionVariable[i][j][s] = optimizationProblem.makeBoolVar("x"+"["+i+","+j+","+s+"]");				
 			 }
 		}
-		//END DECISION VARIABLE
-		//////////////////////////
-		// START CONSTRAINTS
-		//Each Robot can be assign only to a Task	    
-		 for (int i = 0; i < numRobotAug; i++) {
-			 //Initialize the constraint
-			 //MPConstraint c0 = optimizationProblem.makeConstraint(-Double.POSITIVE_INFINITY, 1);
-			 MPConstraint c0 = optimizationProblem.makeConstraint(1, 1);
-			 for (int j = 0; j < numTaskAug; j++) {
-				 for(int s = 0; s < alternativePaths; s++) {
-					 //Build the constraint
-					 c0.setCoefficient(decisionVariable[i][j][s], 1); 
-				 }
-				
-			 }
-		 }
+
+		// Set all constraints (1--3):
 		
-		//Each task can be performed only by a robot
-		 for (int j = 0; j < numTaskAug; j++) {
-			//Initialize the constraint
-			 MPConstraint c0 = optimizationProblem.makeConstraint(1, 1); 
-			 for (int i = 0; i < numRobotAug; i++) {
-				 for(int s = 0; s < alternativePaths; s++) {
-					 //Build the constraint
-					 c0.setCoefficient(decisionVariable[i][j][s], 1); 
-				 } 		
+		// 1) each robot can be assign only to one task	    
+		for(int i = 0; i < numRobotAug; i++) {
+			 MPConstraint c0 = optimizationProblem.makeConstraint(1, 1); //initialization
+			 for(int j = 0; j < numTaskAug; j++) {
+				 for(int s = 0; s < alternativePaths; s++)
+					 c0.setCoefficient(decisionVariable[i][j][s], 1); //set the constraint	
 			 }
-		 }
+		}
+		
+		// 2) each task can be performed only by a robot
+		for(int j = 0; j < numTaskAug; j++) {
+			 MPConstraint c0 = optimizationProblem.makeConstraint(1, 1); //initialization
+			 for (int i = 0; i < numRobotAug; i++) {
+				 for(int s = 0; s < alternativePaths; s++)
+					 c0.setCoefficient(decisionVariable[i][j][s], 1); //set the constraint
+			 }
+		}
 	
-		 for (int robotID : robotsIDs ) {
+		for (int robotID : robotsIDs ) {
 				int i = robotsIDs.indexOf(robotID);
 				for (int taskID : tasksIDs ) {
 					int j = tasksIDs.indexOf(taskID);
 					for(int s = 0; s < alternativePaths; s++) {
-							 if (i < numberRobots) { //Considering only real Robot
+							 if(i < numberRobots) { //Considering only real Robot
 								 PoseSteering[] pss = pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s);
 								 if(pss==null) {
 									 MPConstraint c3 = optimizationProblem.makeConstraint(0,0);
@@ -1035,27 +811,22 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 							 }
 					}
 				}
-		 }
+		}
 		 
-		//END CONSTRAINTS
 		//In case of having more task than robots, the task with a closest deadline are set with a higher priority
 		 if(taskQueue.size() > IDsIdleRobots.size()) {
 			 sortTaskByDeadline();
 			//Each task can be performed only by a robot
-			 for (int j = 0; j < taskQueue.size(); j++) {
-				//Initialize the constraint
+			 for(int j = 0; j < taskQueue.size(); j++) {
 				 if(taskQueue.get(j).isPriority()) {
-					 MPConstraint c3 = optimizationProblem.makeConstraint(1, 1); 
+					 MPConstraint c3 = optimizationProblem.makeConstraint(1, 1); //initialization
 					 for (int i = 0; i < IDsIdleRobots.size(); i++) {
-						 for(int s = 0; s < alternativePaths; s++) {
-							 //Build the constraint
-							 c3.setCoefficient(decisionVariable[i][j][s], 1); 
-						 } 		
+						 for(int s = 0; s < alternativePaths; s++)
+							 c3.setCoefficient(decisionVariable[i][j][s], 1); //set the constraint
 					 }
 				 }
 			 }
 		 }
-		/////////////////////////////////////////////////
 		return optimizationProblem;	
 	}
 	
@@ -1071,8 +842,6 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 	 */
 	protected MPSolver createOptimizationProblem() {
 		this.initialTime = 	Calendar.getInstance().getTimeInMillis();
-		//Perform a check in order to avoid blocking
-		//checkOnBlocking(tec);
 		//Take the number of tasks
 		numberTasks = taskQueue.size();
 		//Get free robots and their IDs
@@ -1084,12 +853,9 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		initializeRobotsIDs();
 		initializeTasksIDs();
 		double[][][] BFunction = evaluateBFunction();
-		
-		
-		
+			
 		//Build the optimization problem
 		MPSolver optimizationProblem = buildOptimizationProblem();
-		
 		
 		//Modify the coefficients of the objective function
 		MPVariable [][][] decisionVariable = tranformArray(optimizationProblem); 
@@ -1133,8 +899,6 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 					 if (AssignmentMatrix[i][j][s] > 0) {
 						 if (i < numberRobots) { //Considering only real Robot
 							 PoseSteering[] pss = pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s);
-							 //PoseSteering[] pss = new PoseSteering[1];
-							 //pss[0] = new PoseSteering(tec.getRobotReport(robotID).getPose(),0);
 							 //For Dispatch mission
 							 if (j < numberTasks && pss != null) {
 								 removePath(pss.hashCode());
@@ -1142,21 +906,13 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 								 taskQueue.get(j).setPaths(pss);
 								 Mission[] robotMissions = taskQueue.get(j).getMissions();
 								 viz.displayTask(taskQueue.get(j).getStartPose(), taskQueue.get(j).getGoalPose(),taskID, "red");
-								 //tec.addMissions(new Mission(IDsIdleRobots[i],pss));
 								 metaCSPLogger.info("Task # "+ taskID + " is Assigned");
 								 metaCSPLogger.info("Robot " + robotID +" is assigned to Task "+ taskID +" throw Path " + (s+1));
-								 //tec.setTaskAssigned(robotID,taskID);
 								 coordinator.addMissions(robotMissions);
-							 }else {
-								 metaCSPLogger.info("Virtual Task # "+ taskID + " is Assigned to a real robot");
 							 }
-						 }else{
-							
-							 
-							
-							 metaCSPLogger.info("Task # "+ taskID + " is not Assigned to a real robot");
-							 
+							 else metaCSPLogger.info("Virtual Task # "+ taskID + " is Assigned to a real robot");
 						 }
+						 else metaCSPLogger.info("Task # "+ taskID + " is not Assigned to a real robot");
 					 }
 					//Remove path from the path set
 					pathsToTargetGoal.remove(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s);
@@ -1169,30 +925,24 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 		int i = 0;
 		int cont = 0;
 		while (i < Math.min(numberRobots, numberTasks)) {
-			if (taskQueue.size() == 0 || taskQueue.size() <= i) {
-				break;
-			}
+			if (taskQueue.size() == 0 || taskQueue.size() <= i)	break;
 			if (taskQueue.get(i).isTaskAssigned()){
 				taskQueue.remove(i);
 				metaCSPLogger.info("Task # "+ (cont+1) + " is removed from Task set");
-			}else {
-				i = i+1;
 			}
+			else i += 1;
 			cont +=1;	
-			
 		}
 		 metaCSPLogger.info("Remaining task: "+ taskQueue.size());
 		 robotsIDs.removeAll(robotsIDs);
 		 tasksIDs.removeAll(tasksIDs);
 		 realTasksIDs.removeAll(realTasksIDs);
 		 IDsIdleRobots.removeAll(IDsIdleRobots);
-		 ScenarioAllocation = null;
+		 scenarioAllocation = null;
 		
 	}//End Task Assignment Function
-	
-	
-	
-	public void startTaskAssignment(AbstractOptimizationAlgorithm optimizationSolver ) {
+		
+	public void startTaskAssignment(AbstractOptimizationAlgorithm optimizationSolver) {
 		//Create meta solver and solver
 		this.optimizationSolver = optimizationSolver;
 		numberRobots = coordinator.getIdleRobots().size();
@@ -1202,14 +952,12 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 	}
 	
 	protected void setupInferenceCallback() {
-		
-		Thread TaskAssignmentThread = new Thread("Task Assignment") {
+		Thread t = new Thread("Task Assignment") {
 			private long threadLastUpdate = Calendar.getInstance().getTimeInMillis();
 			@Override
-			
 			public void run() {
 				while (true) {
-					System.out.println("Thread Running");
+					System.out.println("Task Assignment Thread Running");
 					
 					if (!taskQueue.isEmpty() && coordinator.getIdleRobots().size() > 2) {
 						optimizationModel = createOptimizationProblem();
@@ -1253,13 +1001,9 @@ public class OptimizationProblem extends AbstractOptimizationProblem{
 				}
 			}
 		};
-		TaskAssignmentThread.setPriority(Thread.MAX_PRIORITY);
-		TaskAssignmentThread.start();
-		
+		t.setPriority(Thread.MAX_PRIORITY);
+		t.start();
 	}
 	
-	
-	
-	
-	} //End class
+} //End class
 

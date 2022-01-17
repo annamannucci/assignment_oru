@@ -41,316 +41,255 @@ import com.google.ortools.linearsolver.*;
  * An instantiatable {@link AbstractOptimizationProblem} must provide an implementation of the {@link #buildOptimizationProblem()} function to create the optimization problem, and an implementations of
  * the {@link #evaluateBFunction()} and {@link #evaluateInterferenceCost} methods to evaluate the interference free cost and the interference cost respectively.
  * @author pofe
- *
  */
-
-
 public abstract class AbstractOptimizationProblem {
-	 
-	
 
-		public static String TITLE = "assignment_oru - Robot-agnostic online task assignment for multiple robots";
-		public static String COPYRIGHT = "Copyright \u00a9 2020-" + Calendar.getInstance().get(Calendar.YEAR) + " Paolo Forte";
-		public static String[] CONTRIBUTORS = {"Anna Mannucci", "Federico Pecora"};
-	
-		//null -> public (GPL3) license
-		public static String LICENSE = null;
-	
-		public static String PUBLIC_LICENSE = "This program comes with ABSOLUTELY NO WARRANTY. "
-				+ "This program is free software: you can redistribute it and/or modify it under the "
-				+ "terms of the GNU General Public License as published by the Free Software Foundation, "
-				+ "either version 3 of the License, or (at your option) any later version. see LICENSE for details.";
-		public static String PRIVATE_LICENSE = "This program comes with ABSOLUTELY NO WARRANTY. "
-				+ "This program has been licensed to " + LICENSE + ". The licensee may "
-				+ "redistribute it under certain conditions; see LICENSE for details.";
-	
-		//Force printing of (c) and license upon class loading
-		static { printLicense(); }
-	
-		
-	
-		//Optimization Problem Parameters
-		protected int numberRobots;
-		protected int numberTasks;
-		protected int dummyRobot;
-		protected int dummyTask;
-		protected int numRobotAug;
-		protected int numTaskAug;
-		protected int alternativePaths = 1;
-		protected double linearWeight = 1;
-		protected double [][][] interferenceFreeCostMatrix;
-		protected ArrayList <Task> taskQueue = new ArrayList <Task>();
-		protected ArrayList <Task> taskPosponedQueue = new ArrayList <Task>();	
-		protected ArrayList <Integer> IDsIdleRobots = new ArrayList <Integer>();
-		protected ArrayList <Integer> realTasksIDs = new ArrayList <Integer>();
-		protected ArrayList <Integer> robotsIDs = new ArrayList <Integer>(); //this is the set of IDs of all the robots considered into the problem (i.e. both real and virtual robots)
-		protected ArrayList <Integer> tasksIDs = new ArrayList <Integer>(); //this is the set of IDs of all the tasks considered into the problem (i.e. both real and virtual tasks)
-		protected HashMap<Integer,ROBOT_TYPE> robotTypes = new HashMap<Integer,ROBOT_TYPE>();
-		
-		protected int virtualRobotID = Integer.MAX_VALUE; 
-		protected int virtualTaskID = Integer.MAX_VALUE;
-		
-		
-		protected double [][][] optimalAssignment;
-		protected MPSolver optimizationModel;
-		protected List <double [][][]> feasibleSolutions = new ArrayList <double [][][]>();
-		
-		//ROADMAP Parameters
-		protected String scenario;
-		protected double [][][] ScenarioAllocation;
-		protected boolean saveFutureAllocations = false;
-		
-		
-		
-		//Motion planner and Coordinator Parameters
-		protected AbstractTrajectoryEnvelopeCoordinator coordinator;
-		protected Logger metaCSPLogger = MetaCSPLogging.getLogger(this.getClass());	
-		protected HashMap<Integer, PoseSteering[]> pathsToTargetGoal =  new HashMap<Integer, PoseSteering[]>();
-		
-	
-		
-	
-		
-		//Thread Parameters 
-		protected int CONTROL_PERIOD_TASK = 20000;
-		public static int EFFECTIVE_CONTROL_PERIOD_TASK = 0;	
-		protected AbstractOptimizationAlgorithm optimizationSolver;
-		
-		
-		//Visualization parameters
-		protected TaskFleetVisualization viz = null;
-		
-		
-		
-		/**
-		 * The default footprint used for robots if none is specified.
-		 * NOTE: coordinates in footprints must be given in in CCW or CW order. 
-		 */
-		public static Coordinate[] DEFAULT_FOOTPRINT = new Coordinate[] {
-				new Coordinate(-1.7, 0.7),	//back left
-				new Coordinate(-1.7, -0.7),	//back right
-				new Coordinate(2.7, -0.7),	//front right
-				new Coordinate(2.7, 0.7)	//front left
-		};
-		
-		
-		
-		
+	public static String TITLE = "assignment_oru - Robot-agnostic online task assignment for multiple robots";
+	public static String COPYRIGHT = "Copyright \u00a9 2020-" + Calendar.getInstance().get(Calendar.YEAR) + " Paolo Forte";
+	public static String[] CONTRIBUTORS = {"Anna Mannucci", "Federico Pecora"};
 
-		 /**
-		 * Return the biggest footprint of the robots in fleet
-		*/
-			
-		protected Coordinate[] getMaxFootprint() {
-			double maxArea = 0.0;
-			int robotIDMax = 1;
-			for(int it :  IDsIdleRobots){
-				double robotFootprintArea = coordinator.getFootprintPolygon(it).getArea();
-				if(robotFootprintArea > maxArea) {
-					maxArea = robotFootprintArea;
-					robotIDMax = it; 
-				}
-			}
-			return coordinator.getFootprintPolygon(robotIDMax).getCoordinates();
-		}
+	//null -> public (GPL3) license
+	public static String LICENSE = null;
+	public static String PUBLIC_LICENSE = "This program comes with ABSOLUTELY NO WARRANTY. "
+			+ "This program is free software: you can redistribute it and/or modify it under the "
+			+ "terms of the GNU General Public License as published by the Free Software Foundation, "
+			+ "either version 3 of the License, or (at your option) any later version. see LICENSE for details.";
+	public static String PRIVATE_LICENSE = "This program comes with ABSOLUTELY NO WARRANTY. "
+			+ "This program has been licensed to " + LICENSE + ". The licensee may "
+			+ "redistribute it under certain conditions; see LICENSE for details.";
+
+	//Force printing of (c) and license upon class loading
+	static { printLicense(); }
+
+	//Optimization Problem Parameters
+	protected int numberRobots;
+	protected int numberTasks;
+	protected int dummyRobot;
+	protected int dummyTask;
+	protected int numRobotAug;
+	protected int numTaskAug;
+	protected int alternativePaths = 1;
+	protected double linearWeight = 1;
+	protected double [][][] interferenceFreeCostMatrix;
+	protected ArrayList <Task> taskQueue = new ArrayList <Task>();
+	protected ArrayList <Task> taskPosponedQueue = new ArrayList <Task>();	
+	protected ArrayList <Integer> IDsIdleRobots = new ArrayList <Integer>();
+	protected ArrayList <Integer> realTasksIDs = new ArrayList <Integer>();
+	protected ArrayList <Integer> robotsIDs = new ArrayList <Integer>(); //this is the set of IDs of all the robots considered into the problem (i.e. both real and virtual robots)
+	protected ArrayList <Integer> tasksIDs = new ArrayList <Integer>(); //this is the set of IDs of all the tasks considered into the problem (i.e. both real and virtual tasks)
+	protected HashMap<Integer,ROBOT_TYPE> robotTypes = new HashMap<Integer,ROBOT_TYPE>();
 	
-		
-		/**
-		 * Set the type for the specific robot 
-		 * @param robotID -> ID of the robot
-		 * @param robotType -> type of the robot expressed as {@link ROBOT_TYPE} 
-		 */
-		public void setRobotType(int robotID, ROBOT_TYPE robotType){
-			if(!this.robotTypes.containsKey(robotID)){
-				this.robotTypes.put(robotID, robotType);
+	protected int virtualRobotID = Integer.MAX_VALUE; 
+	protected int virtualTaskID = Integer.MAX_VALUE;
+	
+	protected double [][][] optimalAssignment;
+	protected MPSolver optimizationModel;
+	protected List <double [][][]> feasibleSolutions = new ArrayList <double [][][]>();
+	
+	//Roadmap parameters
+	protected String scenario;
+	protected double [][][] scenarioAllocation;
+	protected boolean saveFutureAllocations = false;
+	
+	//Motion planner and Coordinator Parameters
+	protected AbstractTrajectoryEnvelopeCoordinator coordinator;
+	protected Logger metaCSPLogger = MetaCSPLogging.getLogger(this.getClass());	
+	protected HashMap<Integer, PoseSteering[]> pathsToTargetGoal =  new HashMap<Integer, PoseSteering[]>();
+	
+	//Thread Parameters 
+	protected int CONTROL_PERIOD_TASK = 20000;
+	public static int EFFECTIVE_CONTROL_PERIOD_TASK = 0;	
+	protected AbstractOptimizationAlgorithm optimizationSolver;
+			
+	//Visualization parameters
+	protected TaskFleetVisualization viz = null;
+	
+	/**
+	 * The default footprint used for robots if none is specified.
+	 * NOTE: coordinates in footprints must be given in in CCW or CW order. 
+	 */
+	public static Coordinate[] DEFAULT_FOOTPRINT = new Coordinate[] {
+			new Coordinate(-1.7, 0.7),	//back left
+			new Coordinate(-1.7, -0.7),	//back right
+			new Coordinate(2.7, -0.7),	//front right
+			new Coordinate(2.7, 0.7)	//front left
+	};
+	
+	 /**
+	 * Return the biggest footprint of the robots in fleet
+	*/			
+	protected Coordinate[] getMaxFootprint() {
+		double maxArea = 0.0;
+		int robotIDMax = 1;
+		for(int it :  IDsIdleRobots){
+			double robotFootprintArea = coordinator.getFootprintPolygon(it).getArea();
+			if(robotFootprintArea > maxArea) {
+				maxArea = robotFootprintArea;
+				robotIDMax = it; 
 			}
-			else {
-				this.robotTypes.replace(robotID, robotType);
-			}
+		}
+		return coordinator.getFootprintPolygon(robotIDMax).getCoordinates();
+	}
+
+	
+	/**
+	 * Set the type for the specific robot 
+	 * @param robotID ID of the robot
+	 * @param robotType Type of the robot expressed as {@link ROBOT_TYPE} 
+	 */
+	public void setRobotType(int robotID, ROBOT_TYPE robotType){
+		if(!this.robotTypes.containsKey(robotID)) this.robotTypes.put(robotID, robotType);
+		else this.robotTypes.replace(robotID, robotType);
+	}
+	
+	/**
+	 * Get the robot type of the specific robot.
+	 * @param robotID The ID of the robot
+	 * @return The robot type of the specific robot.
+	 */
+	public ROBOT_TYPE getRobotTypes(int robotID){
+		if(this.robotTypes.containsKey(robotID)) return this.robotTypes.get(robotID);
+		return null;
+	}
+		
+	
+	/**
+	 * Save scenarios (Missions + paths) for all the optimization problems that will be solved (if some tasks are assigned online)
+	 */
+	public void saveAllScenarios() {
+		this.saveFutureAllocations = true;
+	}
+	
 			
+	/**
+	 * Set the maximum alternative number of paths to reach a goal for each robot.
+	 * @param alternativePaths Number of paths to reach a goal
+	 */
+	public void setmaxNumberOfAlternativePaths(int alternativePaths) {
+		this.alternativePaths = alternativePaths;
+	}
+	
+	
+	/** 
+	 * Get the maximum alternative number of paths to reach a goal for each robot.
+	 */
+	public int getmaxNumberOfAlternativePaths() {
+		return this.alternativePaths;
+	}
+	
+	
+	/**
+	 * Get the interference free cost matrix associated to the problem (B function)
+	 * @return
+	 */
+	public double [][][] getInterferenceFreeCostMatrix() {
+		return this.interferenceFreeCostMatrix;
+	}
+	
+	
+	/**
+	 * Save the assignment Matrix in the specific file. If the file does not exist, it will be created.
+	 * @param filename Name of the file where to save the matrix
+	 * @param optimalAssignmentMatrix The task assignment matrix
+	 */
+	public void saveAssignmentMatrixinFile(String filename, double[][][] optimalAssignmentMatrix) {
+	    try {
+	        BufferedWriter bw = new BufferedWriter(new FileWriter((filename),true));
+	        bw.write("{{");
+	        for (int i = 0; i < optimalAssignmentMatrix.length; i++) {
+	        	for (int j = 0; j < optimalAssignmentMatrix[i].length; j++) {
+	        		bw.write("{");
+	        		for (int s = 0; s < alternativePaths; s++) {
+	        			bw.write(optimalAssignmentMatrix[i][j][s]+"");
+	        		}
+	        		bw.write("}");
+	        		bw.write(",");
+	        		
+	        	}
+	        	bw.write("}");
+	        	bw.write(",");
+	            bw.newLine();
+	            bw.write("{");
+	        }
+	        bw.write("-------------");
+	        bw.newLine();
+	        bw.flush();
+	        bw.close();
+	    } catch (IOException e) {}
+	}
+	
+	
+	/**
+	 * Load a Scenario (paths + missions) 
+	 * @param scenario Name of the scenario to load
+	 */		
+	public void loadScenario(String scenario) {
+		this.scenario = scenario;
+	}
+	
+	/**
+	 * Load an Optimal Task Allocation
+	 * @param scenario Name of the scenario to load
+	 */
+	public void loadOptimalAllocation(double [][][] scenario) {
+		this.scenarioAllocation = scenario;
+	}
+	
+	/**
+	 * Set the Coordinator. The coordinator will be used to manage the fleet and solve the coordination problem (avoid collision)
+	 * @param coordinator -> An instance of a AbstractTrajectoryEnvelopeCoordinator
+	 */		
+	public void setCoordinator(AbstractTrajectoryEnvelopeCoordinator coordinator) {
+		this.coordinator = coordinator;
+	}
+	
+	
+	/**
+	 * Get the optimal Assignment Matrix computed with {@link #solveProblem} associated to the problem
+	 * @return optimalAssignment -> Optimal Task assignment
+	 */		
+	public double [][][] getOptimalAssignment(){
+		return optimalAssignment;
+	}
+	
+	
+	/**
+	 * Set the linear weight used in Optimization Problem. This parameter sets the weight (i.e. the importance) of B and F. If alpha = 1 (default value) only the B function is minimized.
+	 * linearWeight must be > 0 and < 1. 
+	 * More this value is close to 0, more is the importance given to F Function. More this value is close to 1, more is the importance given to B function.
+	 * @param alpha -> the linear weight value.
+	 */
+	public void setLinearWeight(double alpha) {
+		if(alpha < 0 || alpha > 1) {
+			throw new Error("The linear weigth must be > 0 and < 1!");
 		}
-		
-		
-		/*
-		public void setRobotTypes(int robotID, int robotType){
-			ArrayList<Integer> rbTypes = new ArrayList<Integer>(); 
-			rbTypes.add(robotType);
-			setRobotTypes(robotID,rbTypes);
-			
-		}
-			
-			
-			
-		public void setRobotTypes(int robotID, ArrayList<Integer> robotTypes){
-			if(!this.robotTypes.containsKey(robotID)){
-				this.robotTypes.put(robotID, robotTypes);
-			}
-			else {
-				ArrayList<Integer> rbTypes = this.robotTypes.get(robotID);
-				rbTypes.addAll(robotTypes);
-				this.robotTypes.replace(robotID, rbTypes);
-			}
-			
-		}
-		*/
-		/**
-		 * Get the robot type of the specific robot.
-		 * @param robotID -> the ID of the robot
-		 * @return The robot type of the specific robot.
-		 */
-		
-		public ROBOT_TYPE getRobotTypes(int robotID){
-			if(this.robotTypes.containsKey(robotID)) {
-				return this.robotTypes.get(robotID);
-			}
-			return null;
-		}
-			
-		
-		/**
-		 * Save scenarios (Missions + paths) for all the optimization problems that will be solved (if some tasks are assigned online)
-		 * 
-		 */
-		public void saveAllScenarios() {
-			this.saveFutureAllocations = true;
-			
-		}
-		
-				
-		/**
-		 * Set the maximum alternative number of paths to reach a goal for each robot.
-		 * @param alternativePaths -> number of path to reach a goal
-		 */
-		public void setmaxNumberOfAlternativePaths(int alternativePaths) {
-			
-			this.alternativePaths = alternativePaths;
-		}
-		
-		
-		/** Get the maximum alternative number of paths to reach a goal for each robot.
-		 */
-		public int getmaxNumberOfAlternativePaths() {
-			
-			return this.alternativePaths;
-		}
-		
-		/**
-		 * Get the interference free cost matrix associated to the problem (B function)
-		 * @return
-		 */
-		public double [][][] getInterferenceFreeCostMatrix() {
-			return this.interferenceFreeCostMatrix;
-		}
-		
-		
-		/**
-		 * Save the assignment Matrix in the specific file. If the file does not exist, it will be created.
-		 * @param filename -> name of the file where to save the matrix
-		 * @param optimalAssignmentMatrix -> the task assignment matrix
-		 */
-		public void saveAssignmentMatrixinFile(String filename, double[][][] optimalAssignmentMatrix) {
-		    try {
-		        BufferedWriter bw = new BufferedWriter(new FileWriter((filename),true));
-		        bw.write("{{");
-		        for (int i = 0; i < optimalAssignmentMatrix.length; i++) {
-		        	for (int j = 0; j < optimalAssignmentMatrix[i].length; j++) {
-		        		bw.write("{");
-		        		for (int s = 0; s < alternativePaths; s++) {
-		        			bw.write(optimalAssignmentMatrix[i][j][s]+"");
-		        		}
-		        		bw.write("}");
-		        		bw.write(",");
-		        		
-		        	}
-		        	bw.write("}");
-		        	bw.write(",");
-		            bw.newLine();
-		            bw.write("{");
-		        }
-		        bw.write("-------------");
-		        bw.newLine();
-		        bw.flush();
-		        bw.close();
-		    } catch (IOException e) {}
-		}
-		
-		
-		/**
-		 * Load a Scenario (paths + missions) 
-		 * @param scenario ->  Scenario to load
-		 */
-		
-		public void loadScenario(String scenario) {
-			this.scenario = scenario;
-		}
-		
-		/**
-		 * Load an Optimal Task Allocation
-		 * @param scenario ->  Scenario to load
-		 */
-		
-		public void loadOptimalAllocation(double [][][] Allocation) {
-			this.ScenarioAllocation = Allocation;
-		}
-		
-		/**
-		 * Set the Coordinator. The coordinator will be used to manage the fleet and solve the coordination problem (avoid collision)
-		 * @param coordinator -> An instance of a AbstractTrajectoryEnvelopeCoordinator
-		 */
-		
-		public void setCoordinator(AbstractTrajectoryEnvelopeCoordinator coordinator) {
-			this.coordinator = coordinator;
-		}
-		
-		
-		/**
-		 * Get the optimal Assignment Matrix computed with {@link #solveProblem} associated to the problem
-		 * @return optimalAssignment -> Optimal Task assignment
-		 */
-		
-		public double [][][] getOptimalAssignment(){
-			return optimalAssignment;
-		}
-		
-		/**
-		 * Set the linear weight used in Optimization Problem. This parameter sets the weight (i.e. the importance) of B and F. If alpha = 1 (default value) only the B function is minimized.
-		 * linearWeight must be > 0 and < 1. 
-		 * More this value is close to 0, more is the importance given to F Function. More this value is close to 1, more is the importance given to B function.
-		 * @param alpha -> the linear weight value.
-		 */
-		
-		public void setLinearWeight(double alpha) {
-			if(alpha < 0 || alpha > 1) {
-				throw new Error("The linear weigth must be > 0 and < 1!");
-			}
-			metaCSPLogger.info("alpha is set to : " + alpha);
-			this.linearWeight = alpha;
-		}	
-		
-		
-		/**
-		 * Get the linear weight used in Optimization Problem.This parameter sets the weight of B and F. If alpha = 1 (default value) only the B function is minimized.
-		 * @return the value of the linear weight alpha
-		 */
-		
-		public double getLinearWeight() {
-			return this.linearWeight;
-		}	
+		metaCSPLogger.info("alpha is set to : " + alpha);
+		this.linearWeight = alpha;
+	}	
+	
+	
+	/**
+	 * Get the linear weight used in Optimization Problem.This parameter sets the weight of B and F. If alpha = 1 (default value) only the B function is minimized.
+	 * @return the value of the linear weight alpha
+	 */
+	
+	public double getLinearWeight() {
+		return this.linearWeight;
+	}	
 		
 		
 	/**
 	 * Set the Fleet Visualization.
 	 * @param viz -> An instance of a TaskFleetVisualization
-	 */
-			
+	 */			
 	public void setFleetVisualization(TaskFleetVisualization viz) {
 		this.viz = viz;
 	}
 	
+	
 	/**
 	 * Initialize the IDs of all the robots considered into the problem (both real and virtual)
 	 */
-	
 	protected void initializeRobotsIDs() {
 		int virtualRobotID = this.virtualRobotID;
 		for(int i= 0; i < numRobotAug; i++) {
@@ -369,17 +308,14 @@ public abstract class AbstractOptimizationProblem {
 	 * Get the IDs of all the robots considered into the problem (both real and virtual)
 	 * @return a set of all the robots IDs
 	 */
-	
 	public ArrayList <Integer> getRobotsIDs() {
 		return this.robotsIDs;
 	}
 	
-	
-	
+		
 	/**
 	 * Initialize the IDs of all the tasks considered into the problem (both real and virtual)
 	 */
-	
 	protected void initializeTasksIDs() {
 		int virtaulTaskID = this.virtualTaskID;
 		for(int i= 0; i < numTaskAug; i++) {
@@ -394,10 +330,10 @@ public abstract class AbstractOptimizationProblem {
 		}
 	}
 	
+	
 	/**
 	 * Get the IDs of all the tasks considered into the problem (both real and virtual)
-	 */
-	
+	 */	
 	public ArrayList <Integer> getTasksIDs() {
 		return this.tasksIDs;
 	}
@@ -415,11 +351,9 @@ public abstract class AbstractOptimizationProblem {
 		for (int j= 0; j< PAll[0].length ; j++) {
 			boolean targetEndCanBeReach = false;
 			for (int i = 0; i < PAll.length; i++) {
-				for (int s = 0; s < alternativePaths; s++) {
-					if(PAll[i][j][s] != Double.POSITIVE_INFINITY) {
+				for (int s = 0; s < alternativePaths; s++) 
+					if(PAll[i][j][s] != Double.POSITIVE_INFINITY) 
 						targetEndCanBeReach = true;
-					}
-				}
 			}
 			//no robot can reach the target end -> need to introduce a dummy task and robot 
 			if(!targetEndCanBeReach) {
@@ -427,7 +361,6 @@ public abstract class AbstractOptimizationProblem {
 				dummyTask += 1 ;
 				numRobotAug += 1;
 				numTaskAug += 1;
-	
 			}	
 		}
 		
@@ -441,25 +374,23 @@ public abstract class AbstractOptimizationProblem {
 					if(i < PAll.length && j< PAll[0].length) {
 						PAllAug[i][j][s] = PAll[i][j][s];
 					}else {
-						if(i < robotsIDs.size()) {
+						if(i < robotsIDs.size()) 
 							robotID = robotsIDs.get(i);						
-						}else {
+						else {
 							robotID = this.virtualRobotID -1 ;
 							robotsIDs.add(robotID);
 						}
-						if (j < tasksIDs.size()) {
+						if (j < tasksIDs.size()) 
 							taskID = tasksIDs.get(j);
-						}else {
+						else {
 							taskID = virtualTaskID - 1;
 							this.virtualTaskID -= 1;
 							tasksIDs.add(taskID);
 						}
 						PAllAug[i][j][s] = 1;
 						pathsToTargetGoal.put(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s, null); //FIXME null may be not correct
-				
 					}
-				}
-					
+				}	
 			}
 		}
 		return PAllAug;
@@ -467,34 +398,23 @@ public abstract class AbstractOptimizationProblem {
 	
 	
 	/**
-	 * Sort the set of tasks task by deadlines
-	 *
-	 */
-	
-	class SortByDeadline implements Comparator<Task>{
-		@Override
-		public int compare(Task task1, Task task2) {
-			return (int) (task1.getDeadline()-task2.getDeadline());
-		}
-	}
-	
-	
-	/**
 	 * Sort the set of tasks by deadlines. Tasks with the closest deadline are prioritized.
 	*/
-	
 	protected void sortTaskByDeadline() {
 		ArrayList <Task> sortedtaskArray = new ArrayList <Task>();
 		for(int j=0; j < taskQueue.size(); j++ ) {
 			sortedtaskArray.add(taskQueue.get(j));
 		}
-		sortedtaskArray.sort(new SortByDeadline());
-		for(int i=0;i < IDsIdleRobots.size(); i++) {
-			int index = taskQueue.indexOf(sortedtaskArray.get(i));
-			if(taskQueue.get(index).getDeadline() != -1) {
-				taskQueue.get(index).setPriority(true);
+		sortedtaskArray.sort(new Comparator<Task>() {
+			@Override
+			public int compare(Task task1, Task task2) {
+				return (int) (task1.getDeadline()-task2.getDeadline());
 			}
-			
+		});
+		for(int i = 0; i < IDsIdleRobots.size(); i++) {
+			int index = taskQueue.indexOf(sortedtaskArray.get(i));
+			if(taskQueue.get(index).getDeadline() != -1)
+				taskQueue.get(index).setPriority(true);
 		}
 	}
 	
@@ -586,7 +506,6 @@ public abstract class AbstractOptimizationProblem {
 		return taskQueue.add(task);
 	}
 
-    
 
 	/**
 	 * Compute the number of Dummy Robots and/or Tasks to add to the problem. Consider the possibility to have a different number of robots (N) and tasks (M). If N > M, dummy tasks are 
@@ -688,15 +607,13 @@ public abstract class AbstractOptimizationProblem {
 		//Take decision Variable from Optimization Problem
 		MPVariable [][][] DecisionVariable = tranformArray(optimizationProblem);
 		//Initialize a Constraint
-		//MPConstraint c2 = optimizationProblem.makeConstraint(-Double.POSITIVE_INFINITY,1);
 		MPConstraint c2 = optimizationProblem.makeConstraint(0,numRobotAug-1);
 		//Define the actual optimal solution as a Constraint in order to not consider more it
     	for (int i = 0; i < numRobotAug; i++) {
     		for (int j = 0; j < numTaskAug; j++) {
     			for(int s = 0;s < alternativePaths; s++) {
-    					if (assignmentMatrix[i][j][s] >0) {
-    						c2.setCoefficient(DecisionVariable[i][j][s],1);
-    					}
+					if (assignmentMatrix[i][j][s] >0)
+						c2.setCoefficient(DecisionVariable[i][j][s],1);
     			}
     		}		
 		 }
@@ -711,8 +628,7 @@ public abstract class AbstractOptimizationProblem {
 	 * @param optimizationProblem -> An optimization problem  defined with {@link #buildOptimizationProblem}
 	 * @param assignmentMatrix -> The Assignment Matrix of the actual optimal solution
 	 * @return Optimization Problem updated with the new constraint on optimal solution cost 
-	 */
-	
+	 */	
 	public MPSolver constraintOnCostSolution(MPSolver optimizationProblem,double objectiveValue) {
 		//Take the vector of Decision Variable from the input solver
 		MPVariable [][][] decisionVariable = tranformArray(optimizationProblem);
@@ -770,7 +686,7 @@ public abstract class AbstractOptimizationProblem {
 		//Evaluate the path length for the actual couple of task and ID
 		//Initialize the path length to infinity
 		double pathLength = Double.POSITIVE_INFINITY;
-		//take index positon of robotID in Robot set
+		//take index position of robotID in Robot set
 		int robotindex = IDsIdleRobots.indexOf(robotID);
 		// Only for real robots and tasks
 		if (IDsIdleRobots.contains(robotID) && realTasksIDs.contains(taskID)) {
@@ -886,29 +802,8 @@ public abstract class AbstractOptimizationProblem {
 	 */
 	
 	public int numberOfFeasibleSolutions(){	
-		/*
-		//Create an optimization problem
-		MPSolver optimizationProblemCopy = buildOptimizationProblem(numRobotAug,numTaskAug,maxNumPaths);
-		//Solve the optimization problem
-	    MPSolver.ResultStatus resultStatus = optimizationProblemCopy.solve();
-	    int numberFeasibleSolution = 0;
-	    while(resultStatus != MPSolver.ResultStatus.INFEASIBLE ) {
-			//Solve the optimization Problem
-    		resultStatus = optimizationProblemCopy.solve();
-    		//If The solution is feasible increment the number of feasible solution
-    		if (resultStatus != MPSolver.ResultStatus.INFEASIBLE) {
-    			numberFeasibleSolution = numberFeasibleSolution + 1;
-    		}
-    		double [][][] assignmentMatrix = saveAssignmentMatrix(numRobotAug,numTaskAug,optimizationProblemCopy);
-			//Add the constraint to actual solution -> in order to consider this solution as already found  
-    		optimizationProblemCopy = constraintOnPreviousSolution(optimizationProblemCopy,assignmentMatrix);
-	    }
-		//Return the Total number of feasible solution
-	    optimizationProblemCopy.clear();
-	    */
-		if(feasibleSolutions.size() != 0){
+		if(feasibleSolutions.size() != 0)
 			return this.feasibleSolutions.size();
-		}
 	    return getFeasibleSolutions().size();
 	}
 	
@@ -918,30 +813,22 @@ public abstract class AbstractOptimizationProblem {
 	 */
 
 	public List <double [][][]> getFeasibleSolutions(){
-		//Define the optimization problem
-		//return this.feasibleSolutions;
-		
+		//Define the optimization problem	
 		MPSolver optimizationProblemCopy = buildOptimizationProblem();
 		
 	    
 	    //Initialize a set to store all feasible solution
-		
-	    
-	    //List <double [][][]> feasibleSolutions = new ArrayList <double [][][]>();
-
 	    MPSolver.ResultStatus resultStatus = optimizationProblemCopy.solve();
 
 	    
-	    while(resultStatus != MPSolver.ResultStatus.INFEASIBLE ) {
+	    while(resultStatus != MPSolver.ResultStatus.INFEASIBLE) {
 			//Solve the optimization Problem
     		resultStatus = optimizationProblemCopy.solve();
     		//If The solution is feasible increment the number of feasible solution
-    		
     		double [][][] assignmentMatrix = getAssignmentMatrix(optimizationProblemCopy);
     		
-    		if (resultStatus != MPSolver.ResultStatus.INFEASIBLE) {
+    		if(resultStatus != MPSolver.ResultStatus.INFEASIBLE) 
     			this.feasibleSolutions.add(assignmentMatrix);
-    		}
 			//Add the constraint to actual solution -> in order to consider this solution as already found  
     		optimizationProblemCopy = constraintOnPreviousSolution(optimizationProblemCopy,assignmentMatrix);
 	    }
@@ -967,7 +854,7 @@ public abstract class AbstractOptimizationProblem {
 	
 	protected double [][][] findOptimalAssignment(AbstractOptimizationAlgorithm optimizationSolver){
 		this.optimalAssignment = optimizationSolver.solveOptimizationProblem(this);
-		this.ScenarioAllocation = null;
+		this.scenarioAllocation = null;
 		this.scenario = null;
 		return this.optimalAssignment;
 	}
@@ -995,8 +882,6 @@ public abstract class AbstractOptimizationProblem {
 	}
 	
 	
-	
-	
 	/**
 	 * Allocate the tasks to the robots
 	 * @param AssignmentMatrix -> An (sub)optimal assignment Matrix of the actual optimization problem
@@ -1011,8 +896,6 @@ public abstract class AbstractOptimizationProblem {
 					 if (AssignmentMatrix[i][j][s] > 0) {
 						 if (i < numberRobots) { //Considering only real Robot
 							 PoseSteering[] pss = pathsToTargetGoal.get(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s);
-							 //PoseSteering[] pss = new PoseSteering[1];
-							 //pss[0] = new PoseSteering(tec.getRobotReport(robotID).getPose(),0);
 							 //For Dispatch mission
 							 if (j < numberTasks && pss != null) {
 								 //removePath(pss.hashCode());
@@ -1020,26 +903,16 @@ public abstract class AbstractOptimizationProblem {
 								 taskQueue.get(j).setPaths(pss);
 								 Mission[] robotMissions = taskQueue.get(j).getMissions();
 								 viz.displayTask(taskQueue.get(j).getStartPose(), taskQueue.get(j).getGoalPose(),taskID, "red");
-								 //tec.addMissions(new Mission(IDsIdleRobots[i],pss));
-								 metaCSPLogger.info("Task # "+ taskID + " is Assigned");
-								 metaCSPLogger.info("Robot " + robotID +" is assigned to Task "+ taskID +" throw Path " + (s+1));
-								 //tec.setTaskAssigned(robotID,taskID);
+								 metaCSPLogger.info("Robot " + robotID +" is assigned to Task "+ taskID +" with Path " + (s+1));
 								 coordinator.addMissions(robotMissions);
-							 }else {
-								 metaCSPLogger.info("Virtual Task # "+ taskID + " is Assigned to a real robot");
 							 }
-						 }else{
-							
-							 
-							
-							 metaCSPLogger.info("Task # "+ taskID + " is not Assigned to a real robot");
-							 
+							 else metaCSPLogger.info("Virtual Task # "+ taskID + " is Assigned to a real robot");
 						 }
+						 else metaCSPLogger.info("Task # "+ taskID + " is not Assigned to a real robot");
 					 }
 					//Remove path from the path set
 					pathsToTargetGoal.remove(robotID*numTaskAug*alternativePaths+taskID*alternativePaths+s);
 				 }
-				 
 			 }
 		 }
 		
@@ -1064,7 +937,7 @@ public abstract class AbstractOptimizationProblem {
 		 tasksIDs.removeAll(tasksIDs);
 		 realTasksIDs.removeAll(realTasksIDs);
 		 IDsIdleRobots.removeAll(IDsIdleRobots);
-		 ScenarioAllocation = null;
+		 scenarioAllocation = null;
 		
 	}//End Task Assignment Function
 	
@@ -1083,7 +956,7 @@ public abstract class AbstractOptimizationProblem {
 	
 	/**
 	 * Start the Task Allocation Algorithm 
-	 * @param optimizationSolver -> An optimization method to solve the optimal assignment problem
+	 * @param optimizationSolver An optimization method to solve the optimal assignment problem
 	 */
 	public void startTaskAssignment(AbstractOptimizationAlgorithm optimizationSolver ) {
 		//Create meta solver and solver
@@ -1096,7 +969,6 @@ public abstract class AbstractOptimizationProblem {
 	
 	
 	protected void setupInferenceCallback() {
-		
 		Thread TaskAssignmentThread = new Thread("Task Assignment") {
 			private long threadLastUpdate = Calendar.getInstance().getTimeInMillis();
 			@Override
@@ -1118,7 +990,6 @@ public abstract class AbstractOptimizationProblem {
 										System.out.println("Robot " + robotID +" is assigned to Task "+ taskID +" throw Path " + (s+1));
 									}
 								}
-									
 							} 
 						}
 						allocateTaskstoRobots(assignmentMatrix);
@@ -1149,7 +1020,6 @@ public abstract class AbstractOptimizationProblem {
 		};
 		TaskAssignmentThread.setPriority(Thread.MAX_PRIORITY);
 		TaskAssignmentThread.start();
-		
 	}
 	
 	
@@ -1170,9 +1040,6 @@ public abstract class AbstractOptimizationProblem {
 		}
 		System.out.println();
 	}
-	
-	
-	
-	
-	}
+
+}
 
